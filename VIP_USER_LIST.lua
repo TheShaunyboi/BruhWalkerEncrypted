@@ -1,1 +1,1 @@
-{"bensto23", "shaunyboi"}
+LIST = {"bensto23", "shaunyboi"}
