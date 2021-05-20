@@ -6,7 +6,8 @@ do
       if value == USER then
         return true
       end
-    return false
+			return false
+		end
   	VIP_USER_LIST()
-	end	
+	end
 end
