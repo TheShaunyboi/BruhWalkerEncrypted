@@ -1,1 +1,3 @@
-LIST = {"bensto23", "shaunyboi", "lucifersAngel"}
+VIP_USER_LIST.lua
+shaunyboi
+bensto23
