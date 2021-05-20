@@ -1,1 +1,5 @@
-LIST = {"shaunyboi", "bensto23"}
+VIP = VIP .. ','
+LIST = {}
+for user in VIP:gmatch("(.-),") do
+    table.insert(LIST, user)
+end
