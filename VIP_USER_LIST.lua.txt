@@ -1,2 +1,1 @@
-shaunyboi
-bensto23
+LIST = {"shaunyboi", "bensto23"}
