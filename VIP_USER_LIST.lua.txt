@@ -1,5 +1,1 @@
-VIP = VIP .. ','
-LIST = {}
-for user in VIP:gmatch("(.-),") do
-    table.insert(LIST, user)
-end
+shaunyboi,bensto23
