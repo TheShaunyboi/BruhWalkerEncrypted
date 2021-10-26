@@ -1,10 +1,10 @@
-if game.local_player.champ_name ~= "kennen" then
+if game.local_player.champ_name ~= "Kennen" then
 	return
 end
 
 do
     local function AutoUpdate()
-		local Version = 1.3
+		local Version = 0.1
 		local file_name = "Worlds2021-Kennen.lua"
 		local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Worlds2021-Kennen.lua"
         local web_version = http:get("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Worlds2021-Kennen.lua.version.txt")
@@ -76,6 +76,7 @@ arkpred = _G.Prediction
 
 local myHero = game.local_player
 local local_player = game.local_player
+local StunThemAll = false
 
 local function Ready(spell)
   return spellbook:can_cast(spell)
@@ -164,8 +165,8 @@ local function GetMinionCount(range, unit)
 end
 
 local function HasPassiveStack(unit)
-  if unit:has_buff(kennenmarkofstorm) then
-    buff = unit:get_buff(PassiveStack)
+  if unit:has_buff("kennenmarkofstorm") then
+    buff = unit:get_buff("kennenmarkofstorm")
     if buff.count > 0 then
       return buff.count
     end
@@ -173,11 +174,43 @@ local function HasPassiveStack(unit)
   return 0
 end
 
-local function HasBuff(unit)
-	if unit:has_buff(BuffName) then
+local function HasPassive(unit)
+	if unit:has_buff("kennenmarkofstorm") then
 		return true
 	end
 	return false
+end
+
+local function UltimateActive()
+	if myHero:has_buff("KennenShurikenStorm") then
+		return true
+	end
+	return false
+end
+
+
+local function GetEnemyPassiveCountCicular(range, p1)
+    count = 0
+    players = game.players
+    for _, unit in ipairs(players) do
+    Range = range * range
+        if unit.is_enemy and GetDistanceSqr2(p1, unit.origin) < Range and IsValid(unit) and HasPassiveStack(unit) >= 2 then
+        count = count + 1
+        end
+    end
+    return count
+end
+
+local function GetMinionPassiveCountCicular(range, p1)
+    count = 0
+    minions = game.minions
+    for _, unit in ipairs(minions) do
+    Range = range * range
+        if unit.is_enemy and GetDistanceSqr2(p1, unit.origin) < Range and IsValid(unit) and HasPassive(unit) then
+        count = count + 1
+        end
+    end
+    return count
 end
 
 function IsImmobile(unit)
@@ -240,10 +273,10 @@ if not file_manager:directory_exists("Shaun's Sexy Common") then
 end
 
 if file_manager:file_exists("Shaun's Sexy Common//Logo.png") then
-	kennen_category = menu:add_category_sprite("Shaun's Sexy Kennen", "Shaun's Sexy Common//Logo.png")
+	kennen_category = menu:add_category_sprite("Shaun's Worlds 2021 Kennen", "Shaun's Sexy Common//Logo.png")
 else
 	http:download_file("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Common/Logo.png", "Shaun's Sexy Common//Logo.png")
-	kennen_category = menu:add_category("Shaun's Worlds Kennen")
+	kennen_category = menu:add_category("Shaun's Worlds 2021 Kennen")
 end
 
 kennen_enabled = menu:add_checkbox("Enabled", kennen_category, 1)
@@ -253,20 +286,19 @@ menu:add_label("#2021 Worlds Hype..", kennen_category)
 
 
 kennen_ark_pred = menu:add_subcategory("[Ark Pred Settings]", kennen_category)
-kennen_ark_pred_q = menu:add_subcategory("[Q] Settings", kennen_ark_pred, 1)
-kennen_q_hitchance = menu:add_slider("[Q] Hit Chance [%]", kennen_ark_pred_q, 1, 99, 50)
+kennen_q_hitchance = menu:add_slider("[Q] Hit Chance [%]", kennen_ark_pred, 1, 99, 50)
 
 kennen_ks_function = menu:add_subcategory("[Kill Steal]", kennen_category)
 kennen_ks_use_q = menu:add_checkbox("Use [Q]", kennen_ks_function, 1)
 kennen_ks_use_w = menu:add_checkbox("Use [W]", kennen_ks_function, 1)
-kennen_ks_use_r = menu:add_checkbox("Use [R]", kennen_ks_function, 1)
+--[[kennen_ks_use_r = menu:add_checkbox("Use [R]", kennen_ks_function, 1)
 kennen_ks_r_blacklist = menu:add_subcategory("Ultimate Kill Steal Whitelist", kennen_ks_function)
 local players = game.players
 for _, t in pairs(players) do
     if t and t.is_enemy then
         menu:add_checkbox("Use R Kill Steal On: "..tostring(t.champ_name), kennen_ks_r_blacklist, 1)
     end
-end
+end]]
 
 kennen_combo = menu:add_subcategory("[Combo]", kennen_category)
 kennen_combo_q = menu:add_subcategory("[Q] Settings", kennen_combo)
@@ -274,17 +306,25 @@ kennen_combo_use_q = menu:add_checkbox("Use [Q]", kennen_combo_q, 1)
 kennen_combo_w = menu:add_subcategory("[W] Settings", kennen_combo)
 kennen_combo_use_w = menu:add_checkbox("Use [W]", kennen_combo_w, 1)
 kennen_combo_use_w_passive = menu:add_slider("Number Of Passive Stacks To Use [W]", kennen_combo_w, 1, 2, 2)
-kennen_combo_use_w_auto = menu:add_checkbox("Auto Use [W] IF Outside [AA] Range", kennen_combo_w, 1)
+kennen_combo_use_w_auto = menu:add_checkbox("Use [W] IF Target Outside [AA] Range", kennen_combo_w, 1)
+kennen_combo_r = menu:add_subcategory("Smart Full Combo [R] Settings", kennen_combo)
+kennen_combo_use_r = menu:add_checkbox("Use Smart Full Combo [R]", kennen_combo_r, 1)
+kennen_combo_use_r_min = menu:add_slider("Don't Full Combo [R] <= Target Health %", kennen_combo_r, 1, 100, 20)
 
 kennen_harass = menu:add_subcategory("[Harass]", kennen_category)
 kennen_harass_use_q = menu:add_checkbox("Use [Q]", kennen_harass, 1)
 kennen_harass_use_w = menu:add_checkbox("Use [W]", kennen_harass, 1)
-kennen_harass_use_w_passive = menu:add_slider("Number Of Passive Stacks To Use [W]", kennen_harass_w, 1, 2, 2)
+kennen_harass_use_w_passive = menu:add_slider("Number Of Passive Stacks To Use [W]", kennen_harass, 1, 2, 2)
 kennen_harass_min_mana = menu:add_slider("Minimum Mana [%] To Harass", kennen_harass, 1, 100, 20)
 
+kennen_lasthit = menu:add_subcategory("[Last Hit]", kennen_category)
+kennen_lasthit_use = menu:add_checkbox("Use [Q] Last Hit", kennen_lasthit, 1)
+
 kennen_autmated_features = menu:add_subcategory("[Automated Features]", kennen_category)
-kennen_auto_w = menu:add_checkbox("Auto [Q] Immobilised Targets", kennen_extra_w, 1)
 kennen_auto_gapclose = menu:add_checkbox("[E] Anti Gap Close", kennen_autmated_features, 1)
+kennen_auto_w = menu:add_subcategory("Auto [W] Settings", kennen_autmated_features, 1)
+kennen_auto_w_use = menu:add_checkbox("Use Auto [W]", kennen_auto_w, 1)
+kennen_auto_w_min = menu:add_slider("Minimum Targets To Perform Auto [W]", kennen_auto_w, 1, 5, 3)
 kennen_auto_r = menu:add_subcategory("Auto [R] Settings", kennen_autmated_features, 1)
 kennen_auto_r_use = menu:add_checkbox("Use Auto [R]", kennen_auto_r, 1)
 kennen_auto_r_min = menu:add_slider("Minimum Targets To Perform Auto [R]", kennen_auto_r, 1, 5, 3)
@@ -293,7 +333,7 @@ kennen_laneclear = menu:add_subcategory("[Lane Clear]", kennen_category)
 kennen_laneclear_use_q = menu:add_checkbox("Use [Q]", kennen_laneclear, 1)
 kennen_laneclear_use_w = menu:add_checkbox("Use [W]", kennen_laneclear, 1)
 kennen_laneclear_min_mana = menu:add_slider("Minimum Mana [%] To Lane Clear", kennen_laneclear, 1, 100, 20)
-kennen_laneclear_w_min = menu:add_slider("Number Of Passive Stacks To Use [W]", kennen_laneclear, 1, 2, 2)
+kennen_laneclear_w_min = menu:add_slider("Number Of Minions With Passive To Use [W]", kennen_laneclear, 1, 10, 3)
 
 kennen_jungleclear = menu:add_subcategory("[Jungle Clear]", kennen_category)
 kennen_jungleclear_use_q = menu:add_checkbox("Use [Q]", kennen_jungleclear, 1)
@@ -310,7 +350,7 @@ kennen_draw_kill_healthbar = menu:add_checkbox("Draw Full Combo On Target Health
 
 -- Spell Data
 
-local Q = { range = 1000, delay = .175 }
+local Q = { range = 1000, delay = .175, speed = 1650, radius = 60 }
 local W = { range = 750, delay = .25 }
 local E = { delay = .1 }
 local R = { range = 550, delay = .25 }
@@ -318,7 +358,7 @@ local R = { range = 550, delay = .25 }
 local Q_input = {
     source = myHero,
 		speed = 1650, range = 1000,
-    delay = 0.175, radius = 150,
+    delay = 0.175, radius = 60,
     collision = {"minion", "wind_wall"},
     type = "linear", hitbox = true
 }
@@ -345,11 +385,13 @@ end
 
 local function CastQ(unit)
 
-	local output = arkpred:get_prediction(Q_input, unit)
-	local inv = arkpred:get_invisible_duration(unit)
-	if output.hit_chance >= menu:get_value(kennen_q_hitchance) / 100 and inv < (Q_input.delay / 2) then
-		local p = output.cast_pos
-	  spellbook:cast_spell(SLOT_Q, Q.delay, p.x, p.y, p.z)
+	if not myHero.is_winding_up then
+		local output = arkpred:get_prediction(Q_input, unit)
+		local inv = arkpred:get_invisible_duration(unit)
+		if output.hit_chance >= menu:get_value(kennen_q_hitchance) / 100 and inv < (Q_input.delay / 2) then
+			local p = output.cast_pos
+		  spellbook:cast_spell(SLOT_Q, Q.delay, p.x, p.y, p.z)
+		end
 	end
 end
 
@@ -373,23 +415,34 @@ local function Combo()
 	local TrueAARange = myHero.attack_range + myHero.bounding_radius
 
 	if menu:get_value(kennen_combo_use_q) == 1 and Ready(SLOT_Q) then
-		if IsValid(target) and IsValid(target) and IsKillable(target) then
+		if IsValid(target) and myHero:distance_to(target.origin) <= Q.range and IsKillable(target) then
 			CastQ(target)
 		end
 	end
 
-	if menu:get_value(kennen_combo_use_w) == 1 and Ready(SLOT_W) then
-		if IsValid(target) myHero:distance_to(target.origin) <= W.range and IsKillable(target) then
+	if menu:get_value(kennen_combo_use_w) == 1 and Ready(SLOT_W) and not StunThemAll then
+		if IsValid(target) and myHero:distance_to(target.origin) <= W.range and IsKillable(target) then
       if HasPassiveStack(target) >= menu:get_value(kennen_combo_use_w_passive) then
 				CastW()
 			end
 		end
 	end
 
-	if menu:get_value(kennen_combo_use_w) == 1 and menu:get_value(kennen_combo_use_w_auto) == 1 and Ready(SLOT_W) then
+	if menu:get_value(kennen_combo_use_w) == 1 and menu:get_value(kennen_combo_use_w_auto) == 1 and Ready(SLOT_W) and not StunThemAll then
 		if IsValid(target) and myHero:distance_to(target.origin) <= W.range and IsKillable(target) then
 			if HasPassiveStack(target) >= 0 and myHero:distance_to(target.origin) > TrueAARange then
 				CastW()
+			end
+		end
+	end
+
+	if menu:get_value(kennen_combo_use_r) == 1 and Ready(SLOT_R) and Ready(SLOT_Q) then
+		if IsValid(target) and myHero:distance_to(target.origin) <= R.range and IsKillable(target) then
+			local fulldmg = GetQDmg(target) + GetWDmg(target) + GetRDmg(target)
+			if fulldmg > target.health then
+				if target:health_percentage() > menu:get_value(kennen_combo_use_r_min) then
+					CastR()
+				end
 			end
 		end
 	end
@@ -403,14 +456,14 @@ local function Harass()
 	local GrabMana = myHero.mana/myHero.max_mana >= menu:get_value(kennen_harass_min_mana) / 100
 	local TrueAARange = myHero.attack_range + myHero.bounding_radius
 
-	if menu:get_value(kennen_harass_use_q) == 1 and Ready(SLOT_Q) and GrabMana then
-		if IsValid(target) and IsValid(target) and IsKillable(target) then
+	if menu:get_value(kennen_harass_use_q) == 1 and Ready(SLOT_Q) and GrabMana and not StunThemAll then
+		if IsValid(target) and myHero:distance_to(target.origin) <= Q.range and IsKillable(target) then
 			CastQ(target)
 		end
 	end
 
-	if menu:get_value(kennen_harass_use_w) == 1 and Ready(SLOT_W) and GrabMana then
-		if IsValid(target) myHero:distance_to(target.origin) <= W.range and IsKillable(target) then
+	if menu:get_value(kennen_harass_use_w) == 1 and Ready(SLOT_W) and GrabMana and not StunThemAll then
+		if IsValid(target) and myHero:distance_to(target.origin) <= W.range and IsKillable(target) then
       if HasPassiveStack(target) >= menu:get_value(kennen_harass_use_w_passive) then
 				CastW()
 			end
@@ -433,14 +486,14 @@ local function AutoKill()
 		end
 
 		if Ready(SLOT_W) and IsValid(target) and myHero:distance_to(target.origin) <= W.range and IsKillable(target) then
-			if menu:get_value(kennen_ks_use_w) == 1 then
+			if menu:get_value(kennen_ks_use_w) == 1 and not StunThemAll then
 				if GetWDmg(target) > target.health then
 					CastW()
 				end
 			end
 		end
 
-		if Ready(SLOT_R) and IsValid(target) and myHero:distance_to(target.origin) <= R.range and IsKillable(target) then
+		--[[if Ready(SLOT_R) and IsValid(target) and myHero:distance_to(target.origin) <= R.range and IsKillable(target) then
 			if menu:get_value(kennen_ks_use_r) == 1 then
         if GetRDmg(target) > target.health then
 				  if menu:get_value_string("Use R Kill Steal On: "..tostring(target.champ_name)) == 1 then
@@ -448,7 +501,7 @@ local function AutoKill()
           end
 			  end
 		  end
-    end
+    end]]
 	end
 end
 
@@ -461,24 +514,20 @@ local function Clear()
 	minions = game.minions
 	for i, target in ipairs(minions) do
 
-		if menu:get_value(kennen_laneclear_use_q) == 1 and Ready(SLOT_Q) then
+		if menu:get_value(kennen_laneclear_use_q) == 1 and Ready(SLOT_Q) and GrabLaneClearMana then
 			if IsValid(target) and target.is_enemy and myHero:distance_to(target.origin) < Q.range then
-				if GrabLaneClearMana then
-					pred_output = pred:predict(Q.speed, Q.delay, Q.range, Q.width, target, false, false)
-					 if pred_output.can_cast then
-						castPos = pred_output.cast_pos
-						spellbook:cast_spell(SLOT_Q, Q.delay, castPos.x, castPos.y, castPos.z)
-					end
+				pred_output = pred:predict(Q.speed, Q.delay, Q.range, Q.radius, target, false, false)
+					if pred_output.can_cast then
+					castPos = pred_output.cast_pos
+					spellbook:cast_spell(SLOT_Q, Q.delay, castPos.x, castPos.y, castPos.z)
 				end
 			end
 		end
 
-		if menu:get_value(kennen_laneclear_use_w) == 1 then
+		if menu:get_value(kennen_laneclear_use_w) == 1 and GrabLaneClearMana and Ready(SLOT_W) then
 			if IsValid(target) and target.is_enemy and myHero:distance_to(target.origin) < W.range then
-				if HasPassiveStack(target) >= menu:get_value(kennen_laneclear_w_min) then
-					if GrabLaneClearMana and Ready(SLOT_W) then
-						CastW()
-					end
+				if GetMinionPassiveCountCicular(W.range, myHero.origin) >= menu:get_value(kennen_laneclear_w_min) then
+					CastW()
 				end
 			end
 		end
@@ -496,9 +545,9 @@ local function JungleClear()
 	for i, target in ipairs(minions) do
 
 		if menu:get_value(kennen_jungleclear_use_q) == 1 and Ready(SLOT_Q) then
-			if IsValid(target) and target.is_enemy and myHero:distance_to(target.origin) < Q.range then
+			if IsValid(target) and myHero:distance_to(target.origin) < Q.range then
 				if GrabJungleClearMana then
-					pred_output = pred:predict(Q.speed, Q.delay, Q.range, Q.width, target, false, false)
+					pred_output = pred:predict(Q.speed, Q.delay, Q.range, Q.radius, target, false, false)
 					 if pred_output.can_cast then
 						castPos = pred_output.cast_pos
 						spellbook:cast_spell(SLOT_Q, Q.delay, castPos.x, castPos.y, castPos.z)
@@ -508,7 +557,7 @@ local function JungleClear()
 		end
 
 		if menu:get_value(kennen_jungleclear_use_w) == 1 and Ready(SLOT_W) then
-			if IsValid(target) and target.is_enemy and myHero:distance_to(target.origin) < W.range then
+			if IsValid(target) and myHero:distance_to(target.origin) < W.range then
 				if HasPassiveStack(target) >= menu:get_value(kennen_jungleclear_w_min) then
 					if GrabJungleClearMana then
 						CastW()
@@ -524,9 +573,42 @@ end
 local function AutoR()
   if menu:get_value(kennen_auto_r_use) == 1 and Ready(SLOT_R) then
     if GetEnemyCountCicular(R.range, myHero.origin) >= menu:get_value(kennen_auto_r_min) then
+			StunThemAll = true
       CastR()
     end
   end
+end
+
+-- Auto W >= Targets
+
+local function AutoW()
+  if menu:get_value(kennen_auto_w_use) == 1 and Ready(SLOT_W) then
+    if GetEnemyPassiveCountCicular(W.range, myHero.origin) >= menu:get_value(kennen_auto_w_min) then
+      CastW()
+    end
+  end
+end
+
+-- Last Hit
+
+local function QLastHit()
+
+  if menu:get_value(kennen_lasthit_use) == 1 and Ready(SLOT_Q) then
+		minions = game.minions
+		for i, target in ipairs(minions) do
+			if IsValid(target) and myHero:distance_to(target.origin) < Q.range and not myHero.is_winding_up and target.is_enemy and target.is_minion then
+				local targetvec = target.origin
+				local endPos = vec3.new(targetvec.x, targetvec.y, targetvec.z)
+				local q_collisions = arkpred:get_collision(Q_input, endPos, target)
+				if next(q_collisions) == nil then
+					if GetQDmg(target) > target.health then
+						castPos = target.origin
+						spellbook:cast_spell(SLOT_Q, Q.delay, castPos.x, castPos.y, castPos.z)
+					end
+				end
+			end
+		end
+	end
 end
 
 -- Gap Close
@@ -578,8 +660,8 @@ local function on_draw()
 
 	local enemydraw = game:world_to_screen(targetvec.x, targetvec.y, targetvec.z)
 	for i, target in ipairs(GetEnemyHeroes()) do
+		local fulldmg = GetQDmg(target) + GetWDmg(target) + GetRDmg(target)
 		if menu:get_value(kennen_draw_kill) == 1 and Ready(SLOT_R) and IsValid(target) then
-			local fulldmg = GetQDmg(target) + GetWDmg(target) + GetRDmg(target)
 			if myHero:distance_to(target.origin) <= 1000 then
 				if fulldmg > target.health then
 					if enemydraw.is_valid and target.is_on_screen and myHero.is_alive then
@@ -604,6 +686,10 @@ local function on_tick()
 		Harass()
 	end
 
+	if combo:get_mode() == MODE_LASTHIT then
+		QLastHit()
+	end
+
 	if combo:get_mode() == MODE_LANECLEAR then
 		Clear()
 		JungleClear()
@@ -612,9 +698,11 @@ local function on_tick()
   AutoR()
 	AutoKill()
 
+	if not UltimateActive() then
+		StunThemAll = false
+	end
 end
 
 client:set_event_callback("on_tick", on_tick)
 client:set_event_callback("on_draw", on_draw)
 client:set_event_callback("on_dash", on_dash)
-client:set_event_callback("on_possible_interrupt", on_possible_interrupt)
