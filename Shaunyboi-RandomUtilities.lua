@@ -113,13 +113,13 @@ random_enabled = menu:add_checkbox("Enabled", random_category, 1)
 menu:add_label("Shauny's Random Utilities", random_category)
 menu:add_label("#Loveyou", random_category)
 
-vision_wards = menu:add_subcategory("[Ward On Vision Feature Lost Setting]", random_category)
+vision_wards = menu:add_subcategory("[Ward On Vision Feature Lost Settings]", random_category)
 random_no_vision = menu:add_checkbox("Use [Ward] On Vision Lost", vision_wards, 0)
 random_no_vision_blue = menu:add_checkbox("Use [Blue Ward] On Vision Lost", vision_wards, 1)
 random_no_vision_yellow = menu:add_checkbox("Use [Blue Ward] On Vision Lost", vision_wards, 1)
 random_no_vision_control = menu:add_checkbox("Use [Control Ward] On Vision Lost", vision_wards, 1)
 
-sounds_selector = menu:add_subcategory("[Sounds Features]", random_category)
+sounds_selector = menu:add_subcategory("[Kill Sounds Settings]", random_category)
 sounds_selector_use = menu:add_checkbox("Use [Kill Sounds]", sounds_selector, 0)
 sounds_selector_1 = menu:add_subcategory("[First Kill Sound] Settings", sounds_selector)
 a_table = {}
