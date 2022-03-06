@@ -387,10 +387,10 @@ local function on_draw()
   	end
 
 	if UpdateDraw then
-		renderer:draw_text_big_centered(screen_size.width / 2, screen_size.height / 2, "Shaun's Utilities Update Available... Press F5")
+		renderer:draw_text_big_centered(screen_size.width / 2, screen_size.height / 2 + 60, "Shaun's Utilities Update Available... Press F5")
 	end	
 	if SoundsDownloaded then
-		renderer:draw_text_big_centered(screen_size.width / 2, screen_size.height / 2 + 50, "All Quake Kill Sounds Downloaded... Press F5")
+		renderer:draw_text_big_centered(screen_size.width / 2, screen_size.height / 2 + 80, "All Quake Kill Sounds Downloaded... Press F5")
 	end	
 end
 
