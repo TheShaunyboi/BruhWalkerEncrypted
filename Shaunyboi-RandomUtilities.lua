@@ -1,7 +1,7 @@
 local UpdateDraw = false
 do
   	local function AutoUpdate()
-		local Version = 0.2
+		local Version = 0.3
 		local file_name = "Shaunyboi-RandomUtilities.lua"
 		local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-RandomUtilities.lua"
 		local web_version = http:get("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-RandomUtilities.lua.version.txt")
@@ -115,7 +115,7 @@ menu:add_label("Shauny's Random Utilities", random_category)
 menu:add_label("#Loveyou", random_category)
 
 thresh_grab = menu:add_subcategory("[Auto Thresh Lantern Features]", random_category)
-thresh_lantern_key = menu:add_keybinder("Auto Lantern Grab Key ", thresh_grab, 88)
+thresh_lantern_key = menu:add_keybinder("Auto Lantern Grab Key ", thresh_grab, 32)
 thresh_auto_ward = menu:add_checkbox("Use [Wards] On Enemy Thresh Lantern", thresh_grab, 1)
 
 vision_wards = menu:add_subcategory("[Auto Ward On Vision Lost Settings]", random_category)
@@ -124,6 +124,9 @@ random_no_vision = menu:add_checkbox("Use [Ward] On Vision Lost", vision_wards, 
 random_no_vision_blue = menu:add_checkbox("Use [Blue Ward] On Vision Lost", vision_wards, 1)
 random_no_vision_yellow = menu:add_checkbox("Use [Yellow Ward] On Vision Lost", vision_wards, 1)
 random_no_vision_control = menu:add_checkbox("Use [Control Ward] On Vision Lost", vision_wards, 1)
+
+ping_vision = menu:add_subcategory("[Auto Ping New Vision]", random_category)
+auto_ping_vision = menu:add_checkbox("Use [WARD HERE] Ping On New Enemy Wards", ping_vision, 1)
 
 sounds_selector = menu:add_subcategory("[Kill Sounds Settings]", random_category)
 sounds_selector_use = menu:add_checkbox("Use [Kill Sounds]", sounds_selector, 1)
@@ -330,6 +333,14 @@ local function on_lose_vision(obj)
 	end	
 end
 
+local function on_object_created(obj, obj_name)
+	if menu:get_value(auto_ping_vision) == 1 then
+		if obj.is_ward and obj.is_enemy then
+			game:send_ping(obj.origin.x, obj.origin.y, obj.origin.z, PING_VISION)
+		end
+	end	
+end
+
 -----------------------------------------------------------------------------------
 
 local function on_draw()
@@ -483,3 +494,4 @@ client:set_event_callback("on_tick", on_tick)
 client:set_event_callback("on_kda_updated", on_kda_updated)
 client:set_event_callback("on_draw", on_draw)
 client:set_event_callback("on_lose_vision", on_lose_vision)
+client:set_event_callback("on_object_created", on_object_created)
