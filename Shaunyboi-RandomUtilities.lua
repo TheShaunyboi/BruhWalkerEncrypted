@@ -1,7 +1,7 @@
 local UpdateDraw = false
 do
   	local function AutoUpdate()
-		local Version = 0.3
+		local Version = 0.4
 		local file_name = "Shaunyboi-RandomUtilities.lua"
 		local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-RandomUtilities.lua"
 		local web_version = http:get("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-RandomUtilities.lua.version.txt")
@@ -97,6 +97,93 @@ local endTime_kill_3 = nil
 local endTime_kill_4 = nil
 local endTime_kill_5 = nil
 
+local function invul_buff(obj)
+
+	if obj then
+		if obj:has_buff("ChronoRevive") then
+			buff = obj:get_buff("ChronoRevive")
+
+			if buff.is_valid then
+				end_time = buff.end_time
+				time_left = end_time - game.game_time
+				return time_left
+			end
+		end
+
+		if obj.is_alive then
+			if obj:has_buff("UndyingRage") then
+				buff = obj:get_buff("UndyingRage")
+		
+				if buff.is_valid then
+					end_time = buff.end_time
+					time_left = end_time - game.game_time
+					return time_left
+				end
+			end
+		
+			if obj:has_buff("KayleR") then
+				buff = obj:get_buff("KayleR")
+		
+				if buff.is_valid then
+					end_time = buff.end_time
+					time_left = end_time - game.game_time
+					return time_left
+				end
+			end
+		
+			if obj:has_buff("LissandraRSelf") then
+				buff = obj:get_buff("LissandraRSelf")
+		
+				if buff.is_valid then
+					end_time = buff.end_time
+					time_left = end_time - game.game_time
+					return time_left
+				end
+			end
+		
+			if obj:has_buff("KindredRNoDeathBuff") then
+				buff = obj:get_buff("KindredRNoDeathBuff")
+		
+				if buff.is_valid then
+					end_time = buff.end_time
+					time_left = end_time - game.game_time
+					return time_left
+				end
+			end
+		
+			if obj:has_buff("FioraW") then
+				buff = obj:get_buff("FioraW")
+		
+				if buff.is_valid then
+					end_time = buff.end_time
+					time_left = end_time - game.game_time
+					return time_left
+				end
+			end
+		
+			if obj:has_buff("VladimirSanguinePool") then
+				buff = obj:get_buff("VladimirSanguinePool")
+		
+				if buff.is_valid then
+					end_time = buff.end_time
+					time_left = end_time - game.game_time
+					return time_left
+				end
+			end
+		
+			if obj:has_buff("TaricR") then
+				buff = obj:get_buff("TaricR")
+		
+				if buff.is_valid then
+					end_time = buff.end_time
+					time_left = end_time - game.game_time
+					return time_left
+				end
+			end
+		end
+	end
+end
+
 -- Menu Config
 
 if not file_manager:directory_exists("Shaun's Sexy Common") then
@@ -127,6 +214,9 @@ random_no_vision_control = menu:add_checkbox("Use [Control Ward] On Vision Lost"
 
 ping_vision = menu:add_subcategory("[Auto Ping New Vision]", random_category)
 auto_ping_vision = menu:add_checkbox("Use [WARD HERE] Ping On New Enemy Wards", ping_vision, 1)
+
+invul_buff_settings = menu:add_subcategory("[Invulnerable Countdown Draw]", random_category)
+invul_buff_draw = menu:add_checkbox("Use Draw Invulnerable Countdown", invul_buff_settings, 1)
 
 sounds_selector = menu:add_subcategory("[Kill Sounds Settings]", random_category)
 sounds_selector_use = menu:add_checkbox("Use [Kill Sounds]", sounds_selector, 1)
@@ -346,15 +436,9 @@ end
 local function on_draw()
 
 	local screen_size = game.screen_size
-	local justme = myHero.origin
-	local myherodraw = game:world_to_screen(justme.x, justme.y, justme.z)
+	local myherodraw = game:world_to_screen(myHero.origin.x, myHero.origin.y, myHero.origin.z)
 
-	if myHero.object_id ~= 0 then
-		origin = myHero.origin
-		x, y, z = origin.x, origin.y, origin.z
-	end
-
-  	if menu:get_value(random_enabled) == 1 and menu:get_value(sounds_selector_use) == 1 then
+  	if menu:get_value(random_enabled) == 1 and menu:get_value(sounds_selector_use) == 1 and myHero.is_alive then
 
 		if menu:get_value(draw_killreset) == 1 and kill_1 and not kill_2 then
 			if myHero.is_on_screen and endTime_kill_1 ~= nil then
@@ -385,6 +469,20 @@ local function on_draw()
 			end
 		end
   	end
+	
+	local players = game.players
+	if menu:get_value(invul_buff_draw) == 1 then
+		for _, obj in ipairs(players) do
+			if obj.is_enemy then
+				local time_left_buff = invul_buff(obj)
+				if time_left_buff then
+					time_left_buff = tonumber(string.format("%.1f", time_left_buff))
+					screen_pos = game:world_to_screen(obj.origin.x, obj.origin.y, obj.origin.z)
+					renderer:draw_text_big_centered(screen_pos.x, screen_pos.y, tostring(time_left_buff))
+				end	
+			end
+		end
+	end	
 
 	if UpdateDraw then
 		renderer:draw_text_big_centered(screen_size.width / 2, screen_size.height / 2 + 60, "Shaun's Utilities Update Available... Press F5")
@@ -461,7 +559,6 @@ local function on_tick()
 				end
 			end
 		end
-
 
 		if game:is_key_down(menu:get_value(thresh_lantern_key)) then
 			allypets = game.pets
