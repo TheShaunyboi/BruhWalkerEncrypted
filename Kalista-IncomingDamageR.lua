@@ -71,7 +71,7 @@ function FindTheOath()
     ally = game.players
 	for _, ally in ipairs(GetAllyHeroes()) do
         if ally:has_buff("kalistacoopstrikeally") then
-            console:log("Shaunyboi Kalista - Found [R] Save Ally")
+            console:log("Shaunyboi Kalista - Found Oathsworn!")
             Oathsworn = ally
 		end
 	end	
