@@ -1,7 +1,7 @@
 local UpdateDraw = false
 do
   	local function AutoUpdate()
-		local Version = 0.4
+		local Version = 0.5
 		local file_name = "Shaunyboi-RandomUtilities.lua"
 		local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-RandomUtilities.lua"
 		local web_version = http:get("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-RandomUtilities.lua.version.txt")
@@ -218,6 +218,12 @@ auto_ping_vision = menu:add_checkbox("Use [WARD HERE] Ping On New Enemy Wards", 
 invul_buff_settings = menu:add_subcategory("[Invulnerable Countdown Draw]", random_category)
 invul_buff_draw = menu:add_checkbox("Use Draw Invulnerable Countdown", invul_buff_settings, 1)
 
+tp_tracker = menu:add_subcategory("[Recall & Teleport Tracker]", random_category)
+menu:add_label("Chat Print When Recall Or Teleport Has Started, Aborted & Finished", tp_tracker)
+menu:add_label("Only You Can See The Chat Print Output", tp_tracker)
+recall_tracker = menu:add_checkbox("Use Tracker", tp_tracker, 1) 
+
+
 sounds_selector = menu:add_subcategory("[Kill Sounds Settings]", random_category)
 sounds_selector_use = menu:add_checkbox("Use [Kill Sounds]", sounds_selector, 1)
 sounds_selector_1 = menu:add_subcategory("[First Kill Sound] Settings", sounds_selector)
@@ -423,12 +429,54 @@ local function on_lose_vision(obj)
 	end	
 end
 
+local new_ward = false
+local current_time = nil
+local ward_pos = nil
 local function on_object_created(obj, obj_name)
 	if menu:get_value(auto_ping_vision) == 1 then
 		if obj.is_ward and obj.is_enemy then
-			game:send_ping(obj.origin.x, obj.origin.y, obj.origin.z, PING_VISION)
+			if obj:distance_to(myHero.origin) <= 2500 then
+				current_time = game.game_time
+				ward_pos = obj
+				new_ward = true
+			end	
 		end
 	end	
+end
+
+local function CastWard_Pos()
+
+	if new_ward and ward_pos and current_time then
+		math.randomseed(os.time())
+		local random_time = math.random(5)
+		local delay_time = current_time + random_time
+		if delay_time < game.game_time then
+			game:send_ping(ward_pos.origin.x, ward_pos.origin.y, ward_pos.origin.z, PING_VISION)
+			new_ward = false
+		end	
+	end
+end
+
+local function on_teleport(obj, tp_duration, tp_name, status)
+	
+	if menu:get_value(recall_tracker) == 1 and obj.is_enemy then
+
+		if status == "Finish" then
+			game:print_chat(obj.champ_name ..  " - <font color=\"#8d3ce3\"><b>Recall Complete</b></font><font")
+		end
+
+		if status == "Abort" then
+			game:print_chat(obj.champ_name ..  " - <font color=\"#8d3ce3\"><b>Recall Aborted</b></font><font")
+		end
+
+		if tp_name == "Recall" and tp_duration > 0.1 then
+			game:print_chat(obj.champ_name .. " - <font color=\"#8d3ce3\"><b>Recall Started</b></font><font")
+		end
+
+		if tp_name == "Teleport" and tp_duration > 0.1 then
+			game:print_chat(obj.champ_name .. " - <font color=\"#8d3ce3\"><b>Teleport Started</b></font><font")
+		end
+	end
 end
 
 -----------------------------------------------------------------------------------
@@ -494,8 +542,12 @@ end
 
 local function on_tick()
 
-  	if menu:get_value(random_enabled) == 1 and menu:get_value(sounds_selector_use) == 1 then
+	if menu:get_value(random_enabled) == 1 and menu:get_value(auto_ping_vision) == 1 then
+		CastWard_Pos()
+	end	
 
+  	if menu:get_value(random_enabled) == 1 and menu:get_value(sounds_selector_use) == 1 then
+		
 		if kill_1 and endTime_kill_1 ~= nil then
 			if os.time() > endTime_kill_1 then
 				if not kill_2 and not kill_3 and not kill_4 and not kill_5 then
@@ -592,3 +644,4 @@ client:set_event_callback("on_kda_updated", on_kda_updated)
 client:set_event_callback("on_draw", on_draw)
 client:set_event_callback("on_lose_vision", on_lose_vision)
 client:set_event_callback("on_object_created", on_object_created)
+client:set_event_callback("on_teleport", on_teleport)
