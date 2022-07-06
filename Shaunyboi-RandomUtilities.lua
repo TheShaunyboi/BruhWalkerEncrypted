@@ -462,7 +462,7 @@ local function on_teleport(obj, tp_duration, tp_name, status)
 	if menu:get_value(recall_tracker) == 1 and obj.is_enemy then
 
 		if tp_name == "Recall" then
-			if tp_duration > 0.1 then 
+			if status == "Start" then 
 				game:print_chat(obj.champ_name .. " - <font color=\"#8d3ce3\"><b>Recall Started</b></font><font")
 			elseif status == "Finish" then
 				game:print_chat(obj.champ_name ..  " - <font color=\"#8d3ce3\"><b>Recall Complete</b></font><font")
@@ -472,7 +472,7 @@ local function on_teleport(obj, tp_duration, tp_name, status)
 		end
 		------------------------------------------------------------------------------------------------------
 		if tp_name == "Teleport" then
-			if tp_duration > 0.1 then
+			if status == "Start" then 
 				game:print_chat(obj.champ_name .. " - <font color=\"#8d3ce3\"><b>Teleport Started</b></font><font")
 			elseif status == "Finish" then
 				game:print_chat(obj.champ_name ..  " - <font color=\"#8d3ce3\"><b>Teleport Complete</b></font><font")
