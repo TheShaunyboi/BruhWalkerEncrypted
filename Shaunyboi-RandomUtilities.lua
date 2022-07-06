@@ -1,7 +1,7 @@
 local UpdateDraw = false
 do
   	local function AutoUpdate()
-		local Version = 0.5
+		local Version = 0.6
 		local file_name = "Shaunyboi-RandomUtilities.lua"
 		local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-RandomUtilities.lua"
 		local web_version = http:get("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-RandomUtilities.lua.version.txt")
@@ -461,20 +461,24 @@ local function on_teleport(obj, tp_duration, tp_name, status)
 	
 	if menu:get_value(recall_tracker) == 1 and obj.is_enemy then
 
-		if status == "Finish" then
-			game:print_chat(obj.champ_name ..  " - <font color=\"#8d3ce3\"><b>Recall Complete</b></font><font")
+		if tp_name == "Recall" then
+			if tp_duration > 0.1 then 
+				game:print_chat(obj.champ_name .. " - <font color=\"#8d3ce3\"><b>Recall Started</b></font><font")
+			elseif status == "Finish" then
+				game:print_chat(obj.champ_name ..  " - <font color=\"#8d3ce3\"><b>Recall Complete</b></font><font")
+			elseif status == "Abort" then
+				game:print_chat(obj.champ_name ..  " - <font color=\"#8d3ce3\"><b>Recall Aborted</b></font><font")
+			end
 		end
-
-		if status == "Abort" then
-			game:print_chat(obj.champ_name ..  " - <font color=\"#8d3ce3\"><b>Recall Aborted</b></font><font")
-		end
-
-		if tp_name == "Recall" and tp_duration > 0.1 then
-			game:print_chat(obj.champ_name .. " - <font color=\"#8d3ce3\"><b>Recall Started</b></font><font")
-		end
-
-		if tp_name == "Teleport" and tp_duration > 0.1 then
-			game:print_chat(obj.champ_name .. " - <font color=\"#8d3ce3\"><b>Teleport Started</b></font><font")
+		------------------------------------------------------------------------------------------------------
+		if tp_name == "Teleport" then
+			if tp_duration > 0.1 then
+				game:print_chat(obj.champ_name .. " - <font color=\"#8d3ce3\"><b>Teleport Started</b></font><font")
+			elseif status == "Finish" then
+				game:print_chat(obj.champ_name ..  " - <font color=\"#8d3ce3\"><b>Teleport Complete</b></font><font")
+			elseif status == "Abort" then
+				game:print_chat(obj.champ_name ..  " - <font color=\"#8d3ce3\"><b>Teleport Aborted</b></font><font")
+			end
 		end
 	end
 end
