@@ -115,7 +115,7 @@ local function on_tick()
 			for _, skillshot in ipairs(skillshots) do
 				if skillshot.dangerLevel == 5 then
 					spellbook:cast_spell(SLOT_R, 0.25)
-					client:delay_action(function() evade:recalculate_path() end, 0.25)
+					client:delay_action(function() evade:recalculate_path() end, 0.05)
 					return
 				end
 			end
