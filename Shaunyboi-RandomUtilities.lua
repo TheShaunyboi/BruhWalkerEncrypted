@@ -1,7 +1,7 @@
 local UpdateDraw = false
 do
   	local function AutoUpdate()
-		local Version = 0.6
+		local Version = 0.7
 		local file_name = "Shaunyboi-RandomUtilities.lua"
 		local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-RandomUtilities.lua"
 		local web_version = http:get("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-RandomUtilities.lua.version.txt")
@@ -77,7 +77,6 @@ end
 --Initialization lines:
 
 local myHero = game.local_player
-local local_player = game.local_player
 --Initialization lines:
 local ml = require "VectorMath"
 
@@ -212,8 +211,9 @@ random_no_vision_blue = menu:add_checkbox("Use [Blue Ward] On Vision Lost", visi
 random_no_vision_yellow = menu:add_checkbox("Use [Yellow Ward] On Vision Lost", vision_wards, 1)
 random_no_vision_control = menu:add_checkbox("Use [Control Ward] On Vision Lost", vision_wards, 1)
 
-ping_vision = menu:add_subcategory("[Auto Ping New Vision]", random_category)
+ping_vision = menu:add_subcategory("[Auto Ping Vision]", random_category)
 auto_ping_vision = menu:add_checkbox("Use [WARD HERE] Ping On New Enemy Wards", ping_vision, 1)
+ward_ping_close = menu:add_checkbox("Use [WARD HERE] Ping When Ally Is Close To Ward", ping_vision, 1)
 
 invul_buff_settings = menu:add_subcategory("[Invulnerable Countdown Draw]", random_category)
 invul_buff_draw = menu:add_checkbox("Use Draw Invulnerable Countdown", invul_buff_settings, 1)
@@ -389,7 +389,7 @@ local function ControlWardCheck()
   local inventory = ml.GetItems()
   	for _, v in ipairs(inventory) do
 		if tonumber(v) == 2055 then
-			local item = local_player:get_item(tonumber(v))
+			local item = myHero:get_item(tonumber(v))
 			if item ~= 0 then
 				control_ward_slot = ml.SlotSet("SLOT_ITEM"..tostring(item.slot))
 				if ml.Ready(control_ward_slot) then
@@ -429,34 +429,6 @@ local function on_lose_vision(obj)
 	end	
 end
 
-local new_ward = false
-local current_time = nil
-local ward_pos = nil
-local function on_object_created(obj, obj_name)
-	if menu:get_value(auto_ping_vision) == 1 then
-		if obj.is_ward and obj.is_enemy then
-			if obj:distance_to(myHero.origin) <= 2500 then
-				current_time = game.game_time
-				ward_pos = obj
-				new_ward = true
-			end	
-		end
-	end	
-end
-
-local function CastWard_Pos()
-
-	if new_ward and ward_pos and current_time then
-		math.randomseed(os.time())
-		local random_time = math.random(5)
-		local delay_time = current_time + random_time
-		if delay_time < game.game_time then
-			game:send_ping(ward_pos.origin.x, ward_pos.origin.y, ward_pos.origin.z, PING_VISION)
-			new_ward = false
-		end	
-	end
-end
-
 local function on_teleport(obj, tp_duration, tp_name, status)
 	
 	if menu:get_value(recall_tracker) == 1 and obj.is_enemy then
@@ -482,6 +454,106 @@ local function on_teleport(obj, tp_duration, tp_name, status)
 		end
 	end
 end
+
+local function IsValid(unit)
+    if (unit and unit.is_targetable and unit.is_alive and unit.is_visible and unit.object_id and unit.health > 0) then
+        return true
+    end
+    return false
+end
+
+local function GetDistanceSqr2(p1, p2)
+    p2x, p2y, p2z = p2.x, p2.y, p2.z
+    p1x, p1y, p1z = p1.x, p1.y, p1.z
+    local dx = p1x - p2x
+    local dz = (p1z or p1y) - (p2z or p2y)
+    return dx*dx + dz*dz
+end
+
+local function GetAllyCountCicular(range, ward)
+    count = 0
+    players = game.players
+    for _, unit in ipairs(players) do
+    Range = range * range
+        if not unit.is_enemy and unit ~= myHero and GetDistanceSqr2(ward.origin, unit.origin) < Range and IsValid(unit) then
+        count = count + 1
+        end
+    end
+    return count
+end
+
+local ping_time = 0
+local ward_store = nil
+local function Ward_Ping_Close()
+	if menu:get_value(ward_ping_close) == 1 then
+		wards = game.wards
+		for _, ward in ipairs(wards) do
+			if ward ~= ward_store and ward.is_ward and ward.is_enemy and GetAllyCountCicular(1000, ward) >= 1 and myHero:distance_to(ward.origin) <= 2500 then
+				game:send_ping(ward.origin.x, ward.origin.y, ward.origin.z, PING_VISION)
+				ward_store = ward
+			end
+		end
+	end
+end
+
+local new_ward = false
+local current_time = nil
+local ward_pos = nil
+local function on_object_created(obj, obj_name)
+	if menu:get_value(auto_ping_vision) == 1 then
+		if obj.is_ward and obj.is_enemy and GetAllyCountCicular(1000, obj) == 0 then
+			if obj:distance_to(myHero.origin) <= 2500 then
+				current_time = game.game_time
+				ward_pos = obj
+				new_ward = true
+			end	
+		end
+	end	
+end
+
+local function CastWard_Pos()
+	if menu:get_value(auto_ping_vision) == 1 then
+		if new_ward and ward_pos and current_time then
+			math.randomseed(os.time())
+			local random_time = math.random(5)
+			local delay_time = current_time + random_time
+			if ward_pos.is_alive then 
+				if delay_time < game.game_time then
+					game:send_ping(ward_pos.origin.x, ward_pos.origin.y, ward_pos.origin.z, PING_VISION)
+					new_ward = false
+				end
+			else 
+				new_ward = false
+			end
+		end
+	end
+end
+
+local function ThreshWarding()
+	if game:is_key_down(menu:get_value(thresh_lantern_key)) then
+		allypets = game.pets
+		for _, allyminion in ipairs(allypets) do
+			if not allyminion.is_enemy and allyminion:distance_to(myHero.origin) <= myHero.attack_range and allyminion.object_name == "ThreshLantern" then
+				spellbook:cast_spell_targetted(62, allyminion, 0.25)
+			end
+		end	
+	end	
+
+	if menu:get_value(thresh_auto_ward) == 1 then
+		local control_ward, control_ward_slot = ControlWardCheck()
+		pets = game.pets
+		for _, minion in ipairs(pets) do
+			if minion.is_enemy and minion:distance_to(myHero.origin) <= 600 and minion.object_name == "ThreshLantern" then
+				if BlueWardCheck() or YellowWardCheck() then
+					spellbook:cast_spell(SLOT_WARD, 0.5, minion.origin.x, minion.origin.y, minion.origin.z)
+				elseif control_ward and ml.Ready(control_ward_slot) then
+					spellbook:cast_spell(control_ward_slot, 0.5, minion.origin.x, minion.origin.y, minion.origin.z)
+				end	
+			end
+		end	
+	end	
+end
+
 
 -----------------------------------------------------------------------------------
 
@@ -546,100 +618,77 @@ end
 
 local function on_tick()
 
-	if menu:get_value(random_enabled) == 1 and menu:get_value(auto_ping_vision) == 1 then
+	if menu:get_value(random_enabled) == 1 then 
 		CastWard_Pos()
-	end	
+		Ward_Ping_Close()
+		ThreshWarding()
 
-  	if menu:get_value(random_enabled) == 1 and menu:get_value(sounds_selector_use) == 1 then
-		
-		if kill_1 and endTime_kill_1 ~= nil then
-			if os.time() > endTime_kill_1 then
-				if not kill_2 and not kill_3 and not kill_4 and not kill_5 then
-					kill_5 = false
-					kill_4 = false
-					kill_3 = false
-					kill_2 = false
-					kill_1 = false
-					endTime_kill_1 = nil
-					endTime_kill_2 = nil
-					endTime_kill_3 = nil
-					endTime_kill_4 = nil
+		if menu:get_value(sounds_selector_use) == 1 then
+			
+			if kill_1 and endTime_kill_1 ~= nil then
+				if os.time() > endTime_kill_1 then
+					if not kill_2 and not kill_3 and not kill_4 and not kill_5 then
+						kill_5 = false
+						kill_4 = false
+						kill_3 = false
+						kill_2 = false
+						kill_1 = false
+						endTime_kill_1 = nil
+						endTime_kill_2 = nil
+						endTime_kill_3 = nil
+						endTime_kill_4 = nil
+					end
+				end
+			end
+
+			if kill_2 and endTime_kill_2 ~= nil then
+				if os.time() > endTime_kill_2 then
+					if not kill_3 and not kill_4 and not kill_5 then
+						kill_5 = false
+						kill_4 = false
+						kill_3 = false
+						kill_2 = false
+						kill_1 = false
+						endTime_kill_1 = nil
+						endTime_kill_2 = nil
+						endTime_kill_3 = nil
+						endTime_kill_4 = nil
+					end
+				end
+			end
+
+			if kill_3 and endTime_kill_3 ~= nil then
+				if os.time() > endTime_kill_3 then
+					if not kill_4 and not kill_5 then
+						kill_5 = false
+						kill_4 = false
+						kill_3 = false
+						kill_2 = false
+						kill_1 = false
+						endTime_kill_1 = nil
+						endTime_kill_2 = nil
+						endTime_kill_3 = nil
+						endTime_kill_4 = nil
+					end
+				end
+			end
+
+			if kill_4 and endTime_kill_4 ~= nil then
+				if os.time() > endTime_kill_4 then
+					if not kill_5 then
+						kill_5 = false
+						kill_4 = false
+						kill_3 = false
+						kill_2 = false
+						kill_1 = false
+						endTime_kill_1 = nil
+						endTime_kill_2 = nil
+						endTime_kill_3 = nil
+						endTime_kill_4 = nil
+					end
 				end
 			end
 		end
-
-		if kill_2 and endTime_kill_2 ~= nil then
-			if os.time() > endTime_kill_2 then
-				if not kill_3 and not kill_4 and not kill_5 then
-					kill_5 = false
-					kill_4 = false
-					kill_3 = false
-					kill_2 = false
-					kill_1 = false
-					endTime_kill_1 = nil
-					endTime_kill_2 = nil
-					endTime_kill_3 = nil
-					endTime_kill_4 = nil
-				end
-			end
-		end
-
-		if kill_3 and endTime_kill_3 ~= nil then
-			if os.time() > endTime_kill_3 then
-				if not kill_4 and not kill_5 then
-					kill_5 = false
-					kill_4 = false
-					kill_3 = false
-					kill_2 = false
-					kill_1 = false
-					endTime_kill_1 = nil
-					endTime_kill_2 = nil
-					endTime_kill_3 = nil
-					endTime_kill_4 = nil
-				end
-			end
-		end
-
-		if kill_4 and endTime_kill_4 ~= nil then
-			if os.time() > endTime_kill_4 then
-				if not kill_5 then
-					kill_5 = false
-					kill_4 = false
-					kill_3 = false
-					kill_2 = false
-					kill_1 = false
-					endTime_kill_1 = nil
-					endTime_kill_2 = nil
-					endTime_kill_3 = nil
-					endTime_kill_4 = nil
-				end
-			end
-		end
-
-		if game:is_key_down(menu:get_value(thresh_lantern_key)) then
-			allypets = game.pets
-			for _, allyminion in ipairs(allypets) do
-				if not allyminion.is_enemy and allyminion:distance_to(myHero.origin) <= myHero.attack_range and allyminion.object_name == "ThreshLantern" then
-					spellbook:cast_spell_targetted(62, allyminion, 0.25)
-				end
-			end	
-		end	
-
-		if menu:get_value(thresh_auto_ward) == 1 then
-			local control_ward, control_ward_slot = ControlWardCheck()
-			pets = game.pets
-			for _, minion in ipairs(pets) do
-				if minion.is_enemy and minion:distance_to(myHero.origin) <= 600 and minion.object_name == "ThreshLantern" then
-					if BlueWardCheck() or YellowWardCheck() then
-						spellbook:cast_spell(SLOT_WARD, 0.5, minion.origin.x, minion.origin.y, minion.origin.z)
-					else 
-						if control_ward and ml.Ready(control_ward_slot) then
-							spellbook:cast_spell(control_ward_slot, 0.5, minion.origin.x, minion.origin.y, minion.origin.z)
-						end
-					end	
-				end
-			end	
-		end	
 	end
 end
 
