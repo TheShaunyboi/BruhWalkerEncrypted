@@ -488,9 +488,10 @@ local function Ward_Ping_Close()
 	if menu:get_value(ward_ping_close) == 1 then
 		wards = game.wards
 		for _, ward in ipairs(wards) do
-			if ward ~= ward_store and ward.is_ward and ward.is_enemy and GetAllyCountCicular(1000, ward) >= 1 and myHero:distance_to(ward.origin) <= 2500 then
+			if ward ~= ward_store and game.game_time > ping_time and ward.is_ward and ward.is_enemy and GetAllyCountCicular(1000, ward) >= 1 and myHero:distance_to(ward.origin) <= 2500 then
 				game:send_ping(ward.origin.x, ward.origin.y, ward.origin.z, PING_VISION)
 				ward_store = ward
+				ping_time = game.game_time + 10
 			end
 		end
 	end
