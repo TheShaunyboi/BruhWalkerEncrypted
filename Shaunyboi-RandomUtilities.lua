@@ -1,7 +1,7 @@
 local UpdateDraw = false
 do
   	local function AutoUpdate()
-		local Version = 0.8
+		local Version = 1.1
 		local file_name = "Shaunyboi-RandomUtilities.lua"
 		local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-RandomUtilities.lua"
 		local web_version = http:get("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-RandomUtilities.lua.version.txt")
@@ -437,9 +437,9 @@ local function on_teleport(obj, tp_duration, tp_name, status)
 			if status == "Start" then 
 				game:print_chat(obj.champ_name .. " - <font color=\"#8d3ce3\"><b>Recall Started</b></font><font")
 			elseif status == "Finish" then
-				game:print_chat(obj.champ_name ..  " - <font color=\"#8d3ce3\"><b>Recall Complete</b></font><font")
+				game:print_chat(obj.champ_name ..  " - <font color=\"#11ff00\"><b>Recall Complete</b></font><font")
 			elseif status == "Abort" then
-				game:print_chat(obj.champ_name ..  " - <font color=\"#8d3ce3\"><b>Recall Aborted</b></font><font")
+				game:print_chat(obj.champ_name ..  " - <font color=\"#ff0000\"><b>Recall Aborted</b></font><font")
 			end
 		end
 		------------------------------------------------------------------------------------------------------
@@ -447,9 +447,9 @@ local function on_teleport(obj, tp_duration, tp_name, status)
 			if status == "Start" then 
 				game:print_chat(obj.champ_name .. " - <font color=\"#8d3ce3\"><b>Teleport Started</b></font><font")
 			elseif status == "Finish" then
-				game:print_chat(obj.champ_name ..  " - <font color=\"#8d3ce3\"><b>Teleport Complete</b></font><font")
+				game:print_chat(obj.champ_name ..  " - <font color=\"#11ff00\"><b>Teleport Complete</b></font><font")
 			elseif status == "Abort" then
-				game:print_chat(obj.champ_name ..  " - <font color=\"#8d3ce3\"><b>Teleport Aborted</b></font><font")
+				game:print_chat(obj.champ_name ..  " - <font color=\"#ff0000\"><b>Teleport Aborted</b></font><font")
 			end
 		end
 	end
