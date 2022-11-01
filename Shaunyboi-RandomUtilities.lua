@@ -1,7 +1,7 @@
 local UpdateDraw = false
 do
   	local function AutoUpdate()
-		local Version = 1.3
+		local Version = 1.4
 		local file_name = "Shaunyboi-RandomUtilities.lua"
 		local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-RandomUtilities.lua"
 		local web_version = http:get("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-RandomUtilities.lua.version.txt")
@@ -222,6 +222,7 @@ tp_tracker = menu:add_subcategory("[Recall & Teleport Tracker]", random_category
 menu:add_label("Chat Print When Recall Or Teleport Has Started, Aborted & Finished", tp_tracker)
 menu:add_label("Only You Can See The Chat Print Output", tp_tracker)
 recall_tracker = menu:add_checkbox("Use Tracker", tp_tracker, 1) 
+rolling_banner = menu:add_checkbox("Notify With Rolling Banner", tp_tracker, 1) 
 recall_tracker_ping = menu:add_checkbox("FOW Ping Recall Start - Your Team Can See This", tp_tracker, 0) 
 
 sounds_selector = menu:add_subcategory("[Kill Sounds Settings]", random_category)
@@ -439,10 +440,19 @@ local function on_teleport(obj, tp_duration, tp_name, status)
 				if menu:get_value(recall_tracker_ping) == 1 and not obj.is_visible then
 					game:send_ping(obj.origin.x, obj.origin.y, obj.origin.z, PING_DEFAULT)
 				end
+				if menu:get_value(rolling_banner) == 1 then
+					notify:add(obj.champ_name .. " Recall Started", 255, 255, 255)
+				end
 			elseif status == "Finish" then
 				game:print_chat(obj.champ_name ..  " - <font color=\"#11ff00\"><b>Recall Complete</b></font><font")
+				if menu:get_value(rolling_banner) == 1 then
+					notify:add(obj.champ_name .. " Recall Complete", 255, 255, 255)
+				end
 			elseif status == "Abort" then
 				game:print_chat(obj.champ_name ..  " - <font color=\"#ff0000\"><b>Recall Aborted</b></font><font")
+				if menu:get_value(rolling_banner) == 1 then
+					notify:add(obj.champ_name .. " Recall Aborted", 255, 255, 255)
+				end
 			end
 		end
 		------------------------------------------------------------------------------------------------------
