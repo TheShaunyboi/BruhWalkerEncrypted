@@ -1,7 +1,7 @@
 local UpdateDraw = false
 do
   	local function AutoUpdate()
-		local Version = 1.4
+		local Version = 1.5
 		local file_name = "Shaunyboi-RandomUtilities.lua"
 		local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-RandomUtilities.lua"
 		local web_version = http:get("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-RandomUtilities.lua.version.txt")
@@ -204,6 +204,9 @@ thresh_grab = menu:add_subcategory("[Auto Thresh Lantern Features]", random_cate
 thresh_lantern_key = menu:add_keybinder("Auto Lantern Grab Key ", thresh_grab, 32)
 thresh_auto_ward = menu:add_checkbox("Use [Wards] On Enemy Thresh Lantern", thresh_grab, 1)
 
+autobuy_blueward_setting = menu:add_subcategory("[Auto Ward Buy Blue Ward Level 9]", random_category)
+autobuy_blueward = menu:add_checkbox("Use Auto Blue Ward Buy Ward Level 9", autobuy_blueward_setting, 0)
+
 vision_wards = menu:add_subcategory("[Auto Ward On Vision Lost Settings]", random_category)
 menu:add_label("Vision Lost In All Grass Area's While Holding Combo Key", vision_wards)
 random_no_vision = menu:add_checkbox("Use [Ward] On Vision Lost", vision_wards, 1)
@@ -373,6 +376,16 @@ local function BlueWardCheck()
 	end
 	return false
 end
+	
+local function AutoBuy_BlueWardCheck()
+	local inventory = ml.GetItems()
+	for _, v in ipairs(inventory) do
+		if tonumber(v) == 3363 then
+			return true
+		end
+	end
+	return false
+end
 
 local function YellowWardCheck()
 	local inventory = ml.GetItems()
@@ -428,6 +441,12 @@ local function on_lose_vision(obj)
 			end
 		end
 	end	
+end
+
+local function AutoBuyWard()
+	if menu:get_value(autobuy_blueward) == 1 and myHero.level >= 9 and not AutoBuy_BlueWardCheck() then
+		game:buy_item(3363)
+	end
 end
 
 local function on_teleport(obj, tp_duration, tp_name, status)
@@ -636,6 +655,7 @@ local function on_tick()
 		CastWard_Pos()
 		Ward_Ping_Close()
 		ThreshWarding()
+		AutoBuyWard()
 
 		if menu:get_value(sounds_selector_use) == 1 then
 			
