@@ -1,7 +1,7 @@
 local UpdateDraw = false
 do
   	local function AutoUpdate()
-		local Version = 1.5
+		local Version = 1.6
 		local file_name = "Shaunyboi-RandomUtilities.lua"
 		local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-RandomUtilities.lua"
 		local web_version = http:get("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-RandomUtilities.lua.version.txt")
@@ -443,8 +443,32 @@ local function on_lose_vision(obj)
 	end	
 end
 
+local AllySide = nil
+local StartPoint = nil
+local function IsInBuyDistance()
+    if StartPoint == nil then return false end
+    return myHero:distance_to(StartPoint) < 1000 
+end
+
+local function t( cond , T , F )
+    if cond then return T else return F end
+end
+
+local function Check_Shop()
+    if StartPoint == nil then
+        if mission_info.map_id == 11 then --<----summoners_rift
+            AllySide = t(myHero.team == 100, "Blue", "Red")
+            StartPoint = t(AllySide == "Blue", vec3.new(413,183,415), vec3.new(14302,171,14384))
+        
+        elseif mission_info.map_id == 12 then --<----howling_abyss
+            AllySide = t(myHero.team == 100, "Blue", "Red")
+            StartPoint = t(AllySide == "Blue", vec3.new(921,-132,1059), vec3.new(11775,-132,11533))
+        end
+    end
+end
+
 local function AutoBuyWard()
-	if menu:get_value(autobuy_blueward) == 1 and myHero.level >= 9 and not AutoBuy_BlueWardCheck() then
+	if menu:get_value(autobuy_blueward) == 1 and myHero.level >= 9 and not AutoBuy_BlueWardCheck() and IsInBuyDistance() then
 		game:buy_item(3363)
 	end
 end
@@ -656,6 +680,7 @@ local function on_tick()
 		Ward_Ping_Close()
 		ThreshWarding()
 		AutoBuyWard()
+		Check_Shop()
 
 		if menu:get_value(sounds_selector_use) == 1 then
 			
