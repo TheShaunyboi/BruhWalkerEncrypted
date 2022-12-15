@@ -1,7 +1,7 @@
 local UpdateDraw = false
 do
   	local function AutoUpdate()
-		local Version = 1.6
+		local Version = 1.7
 		local file_name = "Shaunyboi-RandomUtilities.lua"
 		local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-RandomUtilities.lua"
 		local web_version = http:get("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-RandomUtilities.lua.version.txt")
@@ -95,6 +95,77 @@ local endTime_kill_2 = nil
 local endTime_kill_3 = nil
 local endTime_kill_4 = nil
 local endTime_kill_5 = nil
+
+local function IsValid(unit)
+    if (unit and unit.is_targetable and unit.is_alive and unit.is_visible and unit.object_id and unit.health > 0) then
+        return true
+    end
+    return false
+end
+
+local function GetDistanceSqr2(p1, p2)
+    p2x, p2y, p2z = p2.x, p2.y, p2.z
+    p1x, p1y, p1z = p1.x, p1.y, p1.z
+    local dx = p1x - p2x
+    local dz = (p1z or p1y) - (p2z or p2y)
+    return dx*dx + dz*dz
+end
+
+local function GetDistanceSqr(p1, p2)
+	if not p1 or not p2 then return 0 end
+	return (p1.x - p2.x) *  (p1.x - p2.x) + ((p1.z or p1.y) - (p2.z or p2.y)) * ((p1.z or p1.y) - (p2.z or p2.y)) 
+end
+
+local function GetDistance(p1, p2)
+	return math.sqrt(GetDistanceSqr(p1, p2))
+end
+
+local function GetEnemyHeroes()
+	local _EnemyHeroes = {}
+	players = game.players	
+	for i, unit in ipairs(players) do
+		if unit and unit.is_enemy then
+			table.insert(_EnemyHeroes, unit)
+		end
+	end	
+	return _EnemyHeroes
+end	
+
+local function GetEnemyCount(range, unit)
+	count = 0
+	for i, hero in ipairs(GetEnemyHeroes()) do
+	Range = range * range
+		if GetDistanceSqr(unit.origin, hero.origin) < Range and hero.is_valid then
+			count = count + 1
+		end
+	end
+	return count
+end
+
+local function GetEnemyVisCount()
+	count = 0
+	for i, hero in ipairs(GetEnemyHeroes()) do
+		if hero.is_visable then
+			count = count + 1
+		end
+	end
+	return count
+end
+
+
+local function GetAllyCountCicular(range, ward)
+    count = 0
+    players = game.players
+    for _, unit in ipairs(players) do
+    Range = range * range
+        if not unit.is_enemy and unit ~= myHero and GetDistanceSqr2(ward.origin, unit.origin) < Range and IsValid(unit) then
+        count = count + 1
+        end
+    end
+    return count
+end
+
+-----------------------------------------------------------------------------------------------------------------------------------------
 
 local function invul_buff(obj)
 
@@ -199,6 +270,17 @@ end
 random_enabled = menu:add_checkbox("Enabled", random_category, 1)
 menu:add_label("Shauny's Random Utilities", random_category)
 menu:add_label("#Loveyou", random_category)
+
+ex_menu = menu:add_subcategory("[Semi Manual Exhaust]", random_category)
+menu:add_label("Selects Closest Enemy To you", ex_menu)
+ex_enabled = menu:add_checkbox("Use Manual [Exhaust]", ex_menu, 1)
+ex_key = menu:add_keybinder("Semi Manual [Exhaust] Key", ex_menu, 65)
+ex_whitelist = menu:add_subcategory("[Exhaust] Whitelist", ex_menu)
+for _, ex in pairs(game.players) do
+    if ex and ex.is_enemy then
+        menu:add_checkbox("Use [Exhaust] On: "..tostring(ex.champ_name), ex_whitelist, 1)
+    end
+end
 
 thresh_grab = menu:add_subcategory("[Auto Thresh Lantern Features]", random_category)
 thresh_lantern_key = menu:add_keybinder("Auto Lantern Grab Key ", thresh_grab, 32)
@@ -511,33 +593,6 @@ local function on_teleport(obj, tp_duration, tp_name, status)
 	end
 end
 
-local function IsValid(unit)
-    if (unit and unit.is_targetable and unit.is_alive and unit.is_visible and unit.object_id and unit.health > 0) then
-        return true
-    end
-    return false
-end
-
-local function GetDistanceSqr2(p1, p2)
-    p2x, p2y, p2z = p2.x, p2.y, p2.z
-    p1x, p1y, p1z = p1.x, p1.y, p1.z
-    local dx = p1x - p2x
-    local dz = (p1z or p1y) - (p2z or p2y)
-    return dx*dx + dz*dz
-end
-
-local function GetAllyCountCicular(range, ward)
-    count = 0
-    players = game.players
-    for _, unit in ipairs(players) do
-    Range = range * range
-        if not unit.is_enemy and unit ~= myHero and GetDistanceSqr2(ward.origin, unit.origin) < Range and IsValid(unit) then
-        count = count + 1
-        end
-    end
-    return count
-end
-
 local ping_time = 0
 local ward_store = nil
 local function Ward_Ping_Close()
@@ -590,7 +645,7 @@ local function ThreshWarding()
 	if game:is_key_down(menu:get_value(thresh_lantern_key)) then
 		allypets = game.pets
 		for _, allyminion in ipairs(allypets) do
-			if not allyminion.is_enemy and allyminion:distance_to(myHero.origin) <= myHero.attack_range and allyminion.object_name == "ThreshLantern" then
+			if not allyminion.is_enemy and allyminion:distance_to(myHero.origin) <= myHero.attack_range and allyminion.object_name == "ThreshLantern" and allyminion.is_visable then
 				spellbook:cast_spell_targetted(62, allyminion, 0.25)
 			end
 		end	
@@ -610,6 +665,38 @@ local function ThreshWarding()
 		end	
 	end	
 end
+
+-----------------------------------------------------------------------------------
+ex_slotd = false
+ex_slotf = false
+local function CheckForExhaust()
+	local slot_d = spellbook:get_spell_slot(SLOT_D).spell_data.spell_name
+	local slot_f = spellbook:get_spell_slot(SLOT_F).spell_data.spell_name
+	if slot_d == "SummonerExhaust" then
+		ex_slotd = true
+		return true
+	elseif slot_f == "SummonerExhaust" then
+		ex_slotf = true
+		return true
+	end
+	return false
+end
+
+local function SemiManualExhaust()
+	if menu:get_value(ex_enabled) == 1 and CheckForExhaust() then
+		local target = selector:find_target(650, mode_distance)
+		if game:is_key_down(menu:get_value(ex_key)) and ml.IsValid(target) then
+			if menu:get_value_string("Use [Exhaust] On: "..tostring(target.champ_name)) == 1 then
+				if ex_slotd and ml.Ready(SLOT_D) then
+					spellbook:cast_spell_targetted(SLOT_D, target, 0.25)
+				elseif ex_slotf and ml.Ready(SLOT_F) then
+					spellbook:cast_spell_targetted(SLOT_F, target, 0.25)
+				end
+			end
+		end
+  	end
+end
+
 
 
 -----------------------------------------------------------------------------------
@@ -669,7 +756,7 @@ local function on_draw()
 		renderer:draw_text_big_centered(screen_size.width / 2, screen_size.height / 2 + 60, "Shaun's Utilities Update Available... Press F5")
 	end	
 	if SoundsDownloaded then
-		renderer:draw_text_big_centered(screen_size.width / 2, screen_size.height / 2 + 80, "All Quake Kill Sounds Downloaded... Press F5")
+		renderer:draw_text_big_centered(screen_size.width / 2, screen_size.height / 2 + 80, "All Sounds Downloaded... Press F5")
 	end	
 end
 
@@ -681,6 +768,7 @@ local function on_tick()
 		ThreshWarding()
 		AutoBuyWard()
 		Check_Shop()
+		SemiManualExhaust()
 
 		if menu:get_value(sounds_selector_use) == 1 then
 			
