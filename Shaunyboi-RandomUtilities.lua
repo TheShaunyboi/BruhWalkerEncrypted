@@ -1,7 +1,7 @@
 local UpdateDraw = false
 do
   	local function AutoUpdate()
-		local Version = 1.8
+		local Version = 1.9
 		local file_name = "Shaunyboi-RandomUtilities.lua"
 		local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-RandomUtilities.lua"
 		local web_version = http:get("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-RandomUtilities.lua.version.txt")
@@ -274,7 +274,7 @@ menu:add_label("#Loveyou", random_category)
 ex_menu = menu:add_subcategory("[Semi Manual Exhaust]", random_category)
 menu:add_label("Selects Closest Enemy To you", ex_menu)
 ex_enabled = menu:add_checkbox("Use Manual [Exhaust]", ex_menu, 1)
-ex_key = menu:add_keybinder("Semi Manual [Exhaust] Key", ex_menu, 65)
+ex_key = menu:add_keybinder("Semi Manual [Exhaust] Key", ex_menu, string.byte('A'))
 ex_whitelist = menu:add_subcategory("[Exhaust] Whitelist", ex_menu)
 for _, ex in pairs(game.players) do
     if ex and ex.is_enemy then
