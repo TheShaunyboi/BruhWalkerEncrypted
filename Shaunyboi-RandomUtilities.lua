@@ -1,7 +1,7 @@
 local UpdateDraw = false
 do
   	local function AutoUpdate()
-		local Version = 1.7
+		local Version = 1.8
 		local file_name = "Shaunyboi-RandomUtilities.lua"
 		local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-RandomUtilities.lua"
 		local web_version = http:get("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-RandomUtilities.lua.version.txt")
@@ -281,6 +281,9 @@ for _, ex in pairs(game.players) do
         menu:add_checkbox("Use [Exhaust] On: "..tostring(ex.champ_name), ex_whitelist, 1)
     end
 end
+
+enemy_aa_range_helper = menu:add_subcategory("[Show Enemy AA Range Helper]", random_category)
+enemy_aa_range = menu:add_checkbox("Use Enemy AA Range Helper", enemy_aa_range_helper, 1)
 
 thresh_grab = menu:add_subcategory("[Auto Thresh Lantern Features]", random_category)
 thresh_lantern_key = menu:add_keybinder("Auto Lantern Grab Key ", thresh_grab, 32)
@@ -701,6 +704,23 @@ end
 
 -----------------------------------------------------------------------------------
 
+local EC = require "EvadeCore"
+local Vector = EC.Vector
+
+local function Arc(p1, p2, phi, step)
+	local angle, result = -phi * 0.5, {}
+	local length = p1:Distance(p2) * phi
+	if length == 0 then return {p1} end
+	if step > length then step = length end
+	local steps = math.floor(length / step)
+	for i = 1, steps + 1 do
+		local rotated = p2:Rotate(angle, p1)
+		table.insert(result, rotated)
+		angle = angle + phi / steps
+	end
+	return result
+end
+
 local function on_draw()
 
 	local screen_size = game.screen_size
@@ -758,6 +778,25 @@ local function on_draw()
 	if SoundsDownloaded then
 		renderer:draw_text_big_centered(screen_size.width / 2, screen_size.height / 2 + 80, "All Sounds Downloaded... Press F5")
 	end	
+
+	if menu:get_value(enemy_aa_range) == 1 then
+		for _, enemy in ipairs(game.players) do
+			if enemy.is_enemy and enemy.is_alive and enemy.is_visible then
+				local height = enemy.origin.y
+				local range = enemy.attack_range
+				local hero_pos = Vector:New(myHero.origin)
+				local enemy_pos = Vector:New(enemy.origin)
+				local pos = enemy_pos:Extend(hero_pos, range)
+
+				local arc = Arc(enemy_pos, pos, math.rad(30), 15)
+				for i = 1, #arc - 1 do
+					local p1 = game:world_to_screen_2(arc[i].x, height, arc[i].y)
+					local p2 = game:world_to_screen_2(arc[i + 1].x, height, arc[i + 1].y)
+					renderer:draw_line(p1.x, p1.y, p2.x, p2.y, 1, 255, 255, 255, 255)
+				end
+			end
+		end
+	end
 end
 
 local function on_tick()
