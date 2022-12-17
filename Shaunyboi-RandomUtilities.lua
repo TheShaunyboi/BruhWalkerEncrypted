@@ -1,7 +1,7 @@
 local UpdateDraw = false
 do
   	local function AutoUpdate()
-		local Version = 1.9
+		local Version = 2.1
 		local file_name = "Shaunyboi-RandomUtilities.lua"
 		local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-RandomUtilities.lua"
 		local web_version = http:get("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-RandomUtilities.lua.version.txt")
@@ -461,6 +461,16 @@ local function BlueWardCheck()
 	end
 	return false
 end
+
+local function AutoBuy_YellowWardCheck()
+	local inventory = ml.GetItems()
+	for _, v in ipairs(inventory) do
+		if tonumber(v) == 3340 then
+			return true
+		end
+	end
+	return false
+end
 	
 local function AutoBuy_BlueWardCheck()
 	local inventory = ml.GetItems()
@@ -553,8 +563,10 @@ local function Check_Shop()
 end
 
 local function AutoBuyWard()
-	if menu:get_value(autobuy_blueward) == 1 and myHero.level >= 9 and not AutoBuy_BlueWardCheck() and IsInBuyDistance() then
-		game:buy_item(3363)
+	if menu:get_value(autobuy_blueward) == 1 and not AutoBuy_BlueWardCheck() then
+		if myHero.level >= 9 and AutoBuy_YellowWardCheck() and IsInBuyDistance() then
+			game:buy_item(3363)
+		end
 	end
 end
 
