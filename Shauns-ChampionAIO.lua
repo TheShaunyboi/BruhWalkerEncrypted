@@ -13,12 +13,12 @@ do
     AutoUpdate()
 end
 
+-- Make download DIR if not found
+if not file_manager:directory_exists("Shaun's Sexy Common") then
+	file_manager:create_directory("Shaun's Sexy Common")
+end
+
 function load_and_run_file(filename)
-	-- Make download DIR if not found
-	if not file_manager:directory_exists("Shaun's Sexy Common") then
-		file_manager:create_directory("Shaun's Sexy Common")
-	end
-	
 	-- Open the file and read contents, if not found download from my GitHub
 	if not file_manager:file_exists("Shaun's Sexy Common//" .. filename) then
 	  -- File not found, try downloading it
