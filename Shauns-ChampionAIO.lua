@@ -13,7 +13,7 @@ do
     AutoUpdate()
 end
 
--- Download DIR folder if not found
+-- Create DIR folder if not found
 if not file_manager:directory_exists("Shaun's Sexy Common") then
 	file_manager:create_directory("Shaun's Sexy Common")
 end
