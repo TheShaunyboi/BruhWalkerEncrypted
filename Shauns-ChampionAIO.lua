@@ -17,7 +17,8 @@ function load_and_run_file(filename)
 	-- Open the file and read contents, if not found download from my GitHub
 	if not file_manager:file_exists("Shaun's Sexy Common//" .. filename) then
 	  -- File not found, try downloading it
-	  console:log("Shaun's AIO - File not found, attempting to download")
+	  console:log("Shaun's Champion AIO Message")
+	  console:log("Downloading Champion Script..")
 	  local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/" .. filename
 	  local success = http:download_file(url, "Shaun's Sexy Common//" .. filename)
 	  console:log("Downloaded " .. filename .. " Please Reload via F5!")
