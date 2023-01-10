@@ -125,8 +125,10 @@ end
     
 function TargetSelector:SelectTarget(spell_data, checkCollision)
     
+    -- Return selection method
     targetSelection = SelectionMethod()
 
+    -- If we have no forced targets, run selection method
     if forced_target == nil then
         if targetSelection == "TARGET_LOW_HP_PRIORITY" then
             -- Select target with lowest HP & uses priority
@@ -228,6 +230,7 @@ function TargetSelector:SelectTarget(spell_data, checkCollision)
         end
     end
 
+    -- Draw target selected if menu option is enabled
     if self.selectedTarget and menu:get_value(ts_draw) == 1 then 
         renderer:draw_circle(self.selectedTarget.origin.x, self.selectedTarget.origin.y, self.selectedTarget.origin.z, 50, 0, 255, 255, 255)
     end
