@@ -208,6 +208,7 @@ function TargetSelector:SelectTarget(spell_data, checkCollision)
         end
     end
 
+     -- Select target based off left mouse click
     if menu:get_value(ts_force) == 1 and isMouseButtonDown then
         self.remainingTargets = self:GetEnemyHeroes()
         self.validTargets = {}
