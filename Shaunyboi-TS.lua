@@ -210,7 +210,7 @@ function TargetSelector:SelectTarget(spell_data, checkCollision)
         end
     end
 
-     -- Select target based off left mouse click
+    -- Select target based off left mouse click if menu option is enabled
     if menu:get_value(ts_force) == 1 and isMouseButtonDown then
         self.remainingTargets = self:GetEnemyHeroes()
         self.validTargets = {}
@@ -285,3 +285,4 @@ end
 
 client:set_event_callback("on_wnd_proc", on_wnd_proc)
 return TargetSelector
+ 
