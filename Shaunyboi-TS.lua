@@ -1,9 +1,3 @@
--- Example Use
-
-
-
-
-
 local TargetSelector = {}
 local collision = _G.Prediction
 local forced_target = nil
@@ -268,9 +262,9 @@ if ts_loaded then
     m_table = {}
     m_table[1] = "Lowest Health & Prioity Sorting"
     m_table[2] = "Most AP & Champion Prioity Sorting"
-    m_table[3] = "Most AD & PChampion Prioity Sorting"
+    m_table[3] = "Most AD & Champion Prioity Sorting"
     m_table[4] = "Closest To Mouse Position"
-    m_table[5] = "Champion Prioity Sorting"
+    m_table[5] = "Champion Prioity Sorting Only"
     ts_method_selection = menu:add_dropdown("Method Selection", ts_method, m_table, 0)
 
     ts_force = menu:add_checkbox("Use Left Click Force", ts_category, 1)
