@@ -1,3 +1,8 @@
+-- Example Use
+
+
+
+
 
 local TargetSelector = {}
 local collision = _G.Prediction
@@ -237,12 +242,12 @@ end
 
 do
     local function Update()
-		local Version = 0.1
+		local version = 0.1
 		local file_name = "Shaunyboi-TS.lua"
 		local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-TS.lua"
         local web_version = http:get("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-TS.lua.version.txt")
-		if tonumber(web_version) ~= Version then
-            console:log("Shaunyboi-TS Updated")
+		if tonumber(web_version) ~= version then
+            console:log("Shaunyboi Target Selector Updated")
             console:log("Please Reload via F5")
         end
     end
@@ -279,6 +284,6 @@ if not file_manager:file_exists(file_name) then
    console:log("Ark Prediction Library Downloaded")
    console:log("Please Reload via F5")
 end
-client:set_event_callback("on_wnd_proc", on_wnd_proc)
 
+client:set_event_callback("on_wnd_proc", on_wnd_proc)
 return TargetSelector
