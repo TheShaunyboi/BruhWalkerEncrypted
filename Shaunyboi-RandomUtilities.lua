@@ -165,6 +165,23 @@ local function GetAllyCountCicular(range, ward)
     return count
 end
 
+local EC = require "EvadeCore"
+local Vector = EC.Vector
+
+local function Arc(p1, p2, phi, step)
+	local angle, result = -phi * 0.5, {}
+	local length = p1:Distance(p2) * phi
+	if length == 0 then return {p1} end
+	if step > length then step = length end
+	local steps = math.floor(length / step)
+	for i = 1, steps + 1 do
+		local rotated = p2:Rotate(angle, p1)
+		table.insert(result, rotated)
+		angle = angle + phi / steps
+	end
+	return result
+end
+
 -----------------------------------------------------------------------------------------------------------------------------------------
 
 local function invul_buff(obj)
@@ -733,26 +750,7 @@ local function SemiManualExhaust()
   	end
 end
 
-
-
 -----------------------------------------------------------------------------------
-
-local EC = require "EvadeCore"
-local Vector = EC.Vector
-
-local function Arc(p1, p2, phi, step)
-	local angle, result = -phi * 0.5, {}
-	local length = p1:Distance(p2) * phi
-	if length == 0 then return {p1} end
-	if step > length then step = length end
-	local steps = math.floor(length / step)
-	for i = 1, steps + 1 do
-		local rotated = p2:Rotate(angle, p1)
-		table.insert(result, rotated)
-		angle = angle + phi / steps
-	end
-	return result
-end
 
 local function on_draw()
 
