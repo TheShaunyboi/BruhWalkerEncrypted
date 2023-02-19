@@ -1,6 +1,6 @@
 do
     local function AutoUpdate()
-		local version = 0.1
+		local version = 0.2
 		local file_name = "Shauns-ChampionAIO"
 		local aio_url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shauns-ChampionAIO.lua"
         local web_version = http:get("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shauns-ChampionAIO.lua.version.txt")
@@ -226,6 +226,11 @@ elseif champ_name == "Yone" then
 	end
 elseif champ_name == "Zeri" then
 	local lua_name = "Zeri-TheNeonRaver.lua"
+	if not file_manager:file_exists(lua_name) then
+		load_and_run_file(lua_name)
+	end
+elseif champ_name == "Xayah" then
+	local lua_name = "Xayah-FeatherFetish"
 	if not file_manager:file_exists(lua_name) then
 		load_and_run_file(lua_name)
 	end
