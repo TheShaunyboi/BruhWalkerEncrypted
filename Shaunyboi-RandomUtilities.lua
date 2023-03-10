@@ -1,7 +1,7 @@
 local UpdateDraw = false
 do
   	local function AutoUpdate()
-		local Version = 2.5
+		local Version = 2.6
 		local file_name = "Shaunyboi-RandomUtilities.lua"
 		local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-RandomUtilities.lua"
 		local web_version = http:get("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-RandomUtilities.lua.version.txt")
@@ -163,23 +163,6 @@ local function GetAllyCountCicular(range, ward)
         end
     end
     return count
-end
-
-local EC = require "EvadeCore"
-local Vector = EC.Vector
-
-local function Arc(p1, p2, phi, step)
-	local angle, result = -phi * 0.5, {}
-	local length = p1:Distance(p2) * phi
-	if length == 0 then return {p1} end
-	if step > length then step = length end
-	local steps = math.floor(length / step)
-	for i = 1, steps + 1 do
-		local rotated = p2:Rotate(angle, p1)
-		table.insert(result, rotated)
-		angle = angle + phi / steps
-	end
-	return result
 end
 
 -----------------------------------------------------------------------------------------------------------------------------------------
@@ -698,7 +681,7 @@ local function ThreshWarding()
 	if game:is_key_down(menu:get_value(thresh_lantern_key)) then
 		allypets = game.pets
 		for _, allyminion in ipairs(allypets) do
-			if not allyminion.is_enemy and allyminion:distance_to(myHero.origin) <= myHero.attack_range and allyminion.object_name == "ThreshLantern" and allyminion.is_visable then
+			if not allyminion.is_enemy and allyminion:distance_to(myHero.origin) <= 250 and allyminion.object_name == "ThreshLantern" and allyminion.is_visible and allyminion.is_alive then
 				spellbook:cast_spell_targetted(62, allyminion, 0.25)
 			end
 		end	
@@ -750,7 +733,26 @@ local function SemiManualExhaust()
   	end
 end
 
+
+
 -----------------------------------------------------------------------------------
+
+local EC = require "EvadeCore"
+local Vector = EC.Vector
+
+local function Arc(p1, p2, phi, step)
+	local angle, result = -phi * 0.5, {}
+	local length = p1:Distance(p2) * phi
+	if length == 0 then return {p1} end
+	if step > length then step = length end
+	local steps = math.floor(length / step)
+	for i = 1, steps + 1 do
+		local rotated = p2:Rotate(angle, p1)
+		table.insert(result, rotated)
+		angle = angle + phi / steps
+	end
+	return result
+end
 
 local function on_draw()
 
@@ -815,7 +817,7 @@ local function on_draw()
 			if enemy.is_enemy and enemy.is_alive and enemy.is_visible then
 				if menu:get_value_string("Show AA Enemy Range On: "..tostring(enemy.champ_name)) == 1 then
 					local height = enemy.origin.y
-					local range = enemy.attack_range
+					local range = enemy.attack_range + enemy.bounding_radius
 					local hero_pos = Vector:New(myHero.origin)
 					local enemy_pos = Vector:New(enemy.origin)
 					local pos = enemy_pos:Extend(hero_pos, range)
