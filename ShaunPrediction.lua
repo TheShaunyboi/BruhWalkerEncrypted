@@ -1,4 +1,13 @@
+local pred_loaded = package.loaded["ShaunPrediction"]
+if not pred_loaded then return end
+
+MenuInitialized = MenuInitialized or false
 local ShaunPrediction = {}
+local menu_version = 0.1
+local menu_hitchance
+local menu_target
+local menu_output
+
 function ShaunPrediction:new(target, ability, myHero)
     local o = {}
     setmetatable(o, self)
@@ -39,7 +48,7 @@ function ShaunPrediction:Add(vec1, vec2)
     return add
 end
 
---Normalize a vec3
+--Normalize a vector
 function ShaunPrediction:Normalize(vec)
     local x, y, z = vec.x, vec.y, vec.z
     local mag = math.sqrt(x^2 + y^2 + z^2)
@@ -59,7 +68,7 @@ function ShaunPrediction:Mul(vec, scalar)
     return mul
 end
 
--- Calculate the angle between the caster, the target's current position, and the predicted position
+-- Calculate the angle between vectors
 function ShaunPrediction:AngleBetweenVectors(vec1, vec2)
     local dotProduct = vec1.x * vec2.x + vec1.y * vec2.y + vec1.z * vec2.z
     local mag1 = self:Magnitude(vec1)
@@ -74,7 +83,7 @@ function ShaunPrediction:calculateLinearPrediction(target, ability, myHero)
     local distanceToTarget = self:GetDistanceSqr2(targetPos, myHeroPos)
 
     if distanceToTarget > ability.range then
-        return nil  -- Return nil if the target is not within range
+        return nil
     end
 
     local targetPath = target.path
@@ -127,10 +136,7 @@ function ShaunPrediction:calculateLinearPrediction(target, ability, myHero)
         end
     end
 
-    -- Draw predictedPosition vec3
-    renderer:draw_circle(predictedPosition.x, predictedPosition.y, predictedPosition.z, 30, 255, 255, 255, 255)
-
-    -- Calculate hit chance based on distance and target's pathing
+    -- Calculate hit chance
     local directionToPredictedPosition = self:Sub(predictedPosition, myHeroPos)
     local directionToActualPosition = self:Sub(targetPos, myHeroPos)
 
@@ -141,7 +147,7 @@ function ShaunPrediction:calculateLinearPrediction(target, ability, myHero)
     if targetPath.is_dashing or targetPath.is_moving then
         hitChance = 0.5 * angularHitChance
     else
-        -- Use a different calculation for stationary targets (e.g., a higher base hit chance)
+        -- Use a different calculation for stationary targets (e.g a higher base hit chance)
         hitChance = 0.9 - 0.4 * math.min(self:GetDistanceSqr2(myHeroPos, predictedPosition) / ability.range, 1)
     end
 
@@ -152,10 +158,60 @@ function ShaunPrediction:calculateLinearPrediction(target, ability, myHero)
         hitChance = hitChance * 1.25
     end
 
+    menu_hitchance = hitChance
+    menu_target = targetPos
+    menu_output = predictedPosition
+
     return {
         castPos = predictedPosition,
         hitChance = hitChance,
     }
 end
 
+if not MenuInitialized then
+    do
+        local function Update()
+            local version = 0.1
+            local file_name = "ShaunPrediction.lua"
+            local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/ShaunPrediction.lua"
+            local web_version = http:get("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/ShaunPrediction.lua.version.txt")
+            if tonumber(web_version) == version then
+                console:log("Shaun Prediction Successfully Loaded")
+            else
+                http:download_file(url, file_name)
+                console:log("Shaun Prediction Updated Press F5")
+            end
+        end
+        Update()
+    end
+end
+
+if not MenuInitialized then
+    MenuInitialized = true
+
+    if file_manager:file_exists("Shaun's Sexy Common//Logo.png") then
+        pred_category = menu:add_category_sprite("Shaun Prediction", "Shaun's Sexy Common//Logo.png")
+    else
+        http:download_file("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Common/Logo.png", "Shaun's Sexy Common//Logo.png")
+        pred_category = menu:add_category("Shaun Prediction")
+    end
+
+    debug = menu:add_subcategory("Debug Settings", pred_category)
+    draw_hitchance = menu:add_checkbox("Draw Hit Chance On Target", debug, 0)
+    draw_output = menu:add_checkbox("Draw Calculated Vec3 Output", debug, 0)
+    menu:add_label("Version "..tostring(menu_version), pred_category)
+end
+
+local function on_draw()
+    if menu:get_value(draw_hitchance) == 1 and menu_target and menu_hitchance then
+        local text = game:world_to_screen(menu_target.x, menu_target.y, menu_target.z)
+        renderer:draw_text_centered(text.x, text.y + 50, tostring(menu_hitchance))
+    end
+
+    if menu:get_value(draw_output) == 1 and menu_output then
+        renderer:draw_circle(menu_output.x, menu_output.y, menu_output.z, 30, 255, 255, 255, 255)
+    end
+end
+
+client:set_event_callback("on_draw", on_draw)
 return ShaunPrediction
