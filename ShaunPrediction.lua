@@ -3,14 +3,15 @@ if not pred_loaded then return end
 
 MenuInitialized = MenuInitialized or false
 local ShaunPrediction = {}
-local menu_version = 0.1
+local menu_version = 0.2
 local menu_hitchance
 local menu_target
 local menu_output
 
-function ShaunPrediction:new(target, ability, myHero)
+function ShaunPrediction:new(target, ability, source)
     local o = {}
     setmetatable(o, self)
+    self.reactionAdjustment = nil
     self.__index = self
     return o
 end
@@ -77,9 +78,102 @@ function ShaunPrediction:AngleBetweenVectors(vec1, vec2)
     return angle
 end
 
-function ShaunPrediction:calculateLinearPrediction(target, ability, myHero)
+function ShaunPrediction:GetEnemyHeroes(myHeroPos, range, target)
+    local enemyHeroes = {}
+    players = game.players
+    for _, unit in ipairs(players) do
+        if unit and unit.is_enemy and unit ~= target and unit.is_alive and self:GetDistanceSqr2(myHeroPos, unit.origin) <= range then
+            table.insert(enemyHeroes, unit)
+        end
+    end
+    return enemyHeroes
+end
+
+function ShaunPrediction:GetEnemyMinions(myHeroPos, range)
+    local enemyMinions = {}
+    minion = game.minions
+    for _, unit in ipairs(minion) do
+        if unit and unit.is_enemy and unit.is_alive and self:GetDistanceSqr2(myHeroPos, unit.origin) <= range then
+            table.insert(enemyMinions, unit)
+        end
+    end
+    return enemyMinions
+end
+
+function ShaunPrediction:checkCollision(myHeroPos, predictedPosition, ability, target)
+    local collision = ability.collision
+    local abilityType = ability.type
+
+    if collision then
+        if abilityType == "linear" then
+            local targetDirection = self:Normalize(self:Sub(predictedPosition, myHeroPos))
+            local stepSize = 25
+            local steps = math.floor(ability.range / stepSize)
+
+            for i = 1, steps do
+                local currentPosition = self:Add(myHeroPos, self:Mul(targetDirection, i * stepSize))
+
+                if collision["Hero"] then
+                    local enemyHeroes = self:GetEnemyHeroes(myHeroPos, stepSize, target)
+                    for _, enemyHero in ipairs(enemyHeroes) do
+                        if enemyHero and self:GetDistanceSqr2(currentPosition, enemyHero.origin) <= enemyHero.bounding_radius + ability.width / 2 then
+                            return true
+                        end
+                    end
+                end
+
+                if collision["Minion"] then
+                    local enemyMinions = self:GetEnemyMinions(myHeroPos, stepSize)
+                    for _, enemyMinion in ipairs(enemyMinions) do
+                        if enemyMinion and self:GetDistanceSqr2(currentPosition, enemyMinion.origin) <= enemyMinion.bounding_radius + ability.width / 2 then
+                            return true
+                        end
+                    end
+                end
+            end
+        elseif abilityType == "cone" then
+            local angle = math.rad(ability.angle)
+            local coneDirection = self:Normalize(self:Sub(predictedPosition, myHeroPos))
+            local coneStart = self:Add(myHeroPos, self:Mul(coneDirection, ability.radius))
+
+            local checkUnits = function(units)
+                for _, unit in ipairs(units) do
+                    local unitPos = unit.origin
+                    local directionToUnit = self:Normalize(self:Sub(unitPos, coneStart))
+                    local angleBetweenDirections = self:AngleBetweenVectors(coneDirection, directionToUnit)
+
+                    if angleBetweenDirections <= angle / 2 then
+                        local distanceToUnit = self:GetDistanceSqr2(coneStart, unitPos)
+
+                        if distanceToUnit <= ability.range * ability.range then
+                            return true
+                        end
+                    end
+                end
+                return false
+            end
+
+            if collision["Hero"] then
+                local enemyHeroes = self:GetEnemyHeroes(myHeroPos, ability.range)
+                if checkUnits(enemyHeroes) then
+                    return true
+                end
+            end
+
+            if collision["Minion"] then
+                local enemyMinions = self:GetEnemyMinions(myHeroPos, ability.range)
+                if checkUnits(enemyMinions) then
+                    return true
+                end
+            end
+        end
+    end
+    return false
+end
+
+function ShaunPrediction:calculatePrediction(target, ability, source)
     local targetPos = vec3.new(target.origin.x, target.origin.y, target.origin.z)
-    local myHeroPos = vec3.new(myHero.origin.x, myHero.origin.y, myHero.origin.z)
+    local myHeroPos = vec3.new(source.origin.x, source.origin.y, source.origin.z)
     local distanceToTarget = self:GetDistanceSqr2(targetPos, myHeroPos)
 
     if distanceToTarget > ability.range then
@@ -151,9 +245,31 @@ function ShaunPrediction:calculateLinearPrediction(target, ability, myHero)
         hitChance = 0.9 - 0.4 * math.min(self:GetDistanceSqr2(myHeroPos, predictedPosition) / ability.range, 1)
     end
 
-    -- Adjust hit chance based on target's bounding radius and ability width
+    -- Add a reaction time to hitChance calculation
+    self.reactionAdjustment = menu:get_value(menu_reactionTime) / 100
+    if self.reactionAdjustment > 0 then
+        local distanceCoveredByReactionTime = target.move_speed * self.reactionAdjustment
+        hitChance = hitChance * (1 - math.min(distanceCoveredByReactionTime / ability.range, 1))
+    end
+
+    -- Adjust hit chance based on target's bounding radius, ability's width, radius, or angle
     local distanceDifference = math.abs(self:GetDistanceSqr2(myHeroPos, predictedPosition) - self:GetDistanceSqr2(myHeroPos, targetPos))
-    local totalRadius = target.bounding_radius + ability.width / 2
+    local totalRadius
+    if ability.type == "linear" then
+        if self:checkCollision(myHeroPos, predictedPosition, ability, target) then
+            return nil
+        end
+        totalRadius = target.bounding_radius + ability.width / 2
+
+    elseif ability.type == "circular" then
+        totalRadius = target.bounding_radius + ability.radius
+
+    elseif ability.type == "cone" then
+        if self:checkCollision(myHeroPos, predictedPosition, ability, target) then
+            return nil
+        end
+        totalRadius = target.bounding_radius + math.tan(math.rad(ability.angle / 2)) * distanceToTarget
+    end
     if distanceDifference <= totalRadius then
         hitChance = hitChance * 1.25
     end
@@ -171,7 +287,7 @@ end
 if not MenuInitialized then
     do
         local function Update()
-            local version = 0.1
+            local version = 0.2
             local file_name = "ShaunPrediction.lua"
             local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/ShaunPrediction.lua"
             local web_version = http:get("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/ShaunPrediction.lua.version.txt")
@@ -196,13 +312,15 @@ if not MenuInitialized then
         pred_category = menu:add_category("Shaun Prediction")
     end
 
-    debug = menu:add_subcategory("Debug Settings", pred_category)
-    draw_hitchance = menu:add_checkbox("Draw Hit Chance On Target", debug, 0)
-    draw_output = menu:add_checkbox("Draw Calculated Vec3 Output", debug, 0)
+    menu:add_label("Increasing Reaction Time Will Lower Overall Hitchance", pred_category)
+    menu_reactionTime = menu:add_slider("Reaction Time Adjustment / 100", pred_category, 0, 500, 0)
+    draw_debug = menu:add_subcategory("Debug Draws", pred_category)
+    draw_hitchance = menu:add_checkbox("Draw Hit Chance On Target", draw_debug, 1)
+    draw_output = menu:add_checkbox("Draw Calculated Vec3 Output", draw_debug, 1)
     menu:add_label("Version "..tostring(menu_version), pred_category)
 end
 
-local function on_draw()
+function on_draw()
     if menu:get_value(draw_hitchance) == 1 and menu_target and menu_hitchance then
         local text = game:world_to_screen(menu_target.x, menu_target.y, menu_target.z)
         renderer:draw_text_centered(text.x, text.y + 50, tostring(menu_hitchance))
