@@ -3,7 +3,7 @@ if not pred_loaded then return end
 
 MenuInitialized = MenuInitialized or false
 local ShaunPrediction = {}
-local menu_version = 0.3
+local menu_version = 0.35
 local menu_hitchance
 local menu_target
 local menu_output
@@ -79,125 +79,38 @@ function ShaunPrediction:AngleBetweenVectors(vec1, vec2)
     return angle
 end
 
-function ShaunPrediction:GetEnemyHeroes(myHeroPos, range, target, predictedPosition)
+--Calculate the squared magnitude of a vector
+function ShaunPrediction:MagnitudeSquared(vec)
+    return vec.x * vec.x + vec.y * vec.y + vec.z * vec.z
+end
+
+--Calculate the dot product of two vectors
+function ShaunPrediction:DotProduct(vec1, vec2)
+    return vec1.x * vec2.x + vec1.y * vec2.y + vec1.z * vec2.z
+end
+
+function ShaunPrediction:GetEnemyHeroes(myHeroPos, range, target)
     local enemyHeroes = {}
     heroes = game.players
     for _, unit in ipairs(heroes) do
         if unit and unit.is_enemy and unit.is_alive and unit.object_id ~= target.object_id and self:GetDistanceSqr2(myHeroPos, unit.origin) <= range then
-            local isBetween = false
-            if predictedPosition then
-                local distanceToPredictedPos = self:GetDistanceSqr2(unit.origin, predictedPosition)
-                local distanceToMyHeroPos = self:GetDistanceSqr2(unit.origin, myHeroPos)
-                local totalDistance = self:GetDistanceSqr2(myHeroPos, predictedPosition)
-
-                isBetween = distanceToPredictedPos + distanceToMyHeroPos <= totalDistance
-            end
-            if not predictedPosition or isBetween then
-                table.insert(enemyHeroes, unit)
-            end
+            table.insert(enemyHeroes, unit)
         end
     end
     return enemyHeroes
 end
 
 
-function ShaunPrediction:GetEnemyMinions(myHeroPos, range, predictedPosition)
+function ShaunPrediction:GetEnemyMinions(myHeroPos, range)
     local enemyMinions = {}
     minion = game.minions
     for _, unit in ipairs(minion) do
         if unit and unit.is_enemy and unit.is_alive and self:GetDistanceSqr2(myHeroPos, unit.origin) <= range then
-            local isBetween = false
-            if predictedPosition then
-                local distanceToPredictedPos = self:GetDistanceSqr2(unit.origin, predictedPosition)
-                local distanceToMyHeroPos = self:GetDistanceSqr2(unit.origin, myHeroPos)
-                local totalDistance = self:GetDistanceSqr2(myHeroPos, predictedPosition)
-
-                isBetween = distanceToPredictedPos + distanceToMyHeroPos <= totalDistance
-            end
-            if not predictedPosition or isBetween then
-                table.insert(enemyMinions, unit)
-            end
+            table.insert(enemyMinions, unit)
         end
     end
     return enemyMinions
 end
-
-
-
-function ShaunPrediction:checkCollision(myHeroPos, predictedPosition, ability, target)
-    local collision = ability.collision
-    local abilityType = ability.type
-
-    if collision then
-        if abilityType == "linear" then
-            local targetDirection = self:Normalize(self:Sub(predictedPosition, myHeroPos))
-            local stepSize = 50
-            local steps = math.floor(ability.range / stepSize)
-        
-            for i = 1, steps do
-                local currentPosition = self:Add(myHeroPos, self:Mul(targetDirection, i * stepSize))
-                local checkRadius = ability.width / 2
-        
-                if collision["Hero"] then
-                    local enemyHeroes = self:GetEnemyHeroes(myHeroPos, stepSize, target, predictedPosition)
-                    for _, enemyHero in ipairs(enemyHeroes) do
-                        if enemyHero and self:GetDistanceSqr2(currentPosition, enemyHero.origin) <= (enemyHero.bounding_radius + checkRadius) * (enemyHero.bounding_radius + checkRadius) then
-                            return true
-                        end
-                    end
-                end
-        
-                if collision["Minion"] then
-                    local enemyMinions = self:GetEnemyMinions(myHeroPos, stepSize, predictedPosition)
-                    for _, enemyMinion in ipairs(enemyMinions) do
-                        if enemyMinion and self:GetDistanceSqr2(currentPosition, enemyMinion.origin) <= (enemyMinion.bounding_radius + checkRadius) * (enemyMinion.bounding_radius + checkRadius) then
-                            console:log("2")
-                            return true
-                        end
-                    end
-                end
-            end
-        
-        elseif abilityType == "cone" then
-            local coneAngle = math.rad(ability.angle)
-            local checkRadius = ability.range
-
-            local checkUnits = function(units)
-                for _, unit in ipairs(units) do
-                    local unitPos = unit.origin
-                    local directionToUnit = self:Normalize(self:Sub(unitPos, myHeroPos))
-                    local angleBetweenDirections = self:AngleBetweenVectors(self:Sub(predictedPosition, myHeroPos), directionToUnit)
-
-                    if angleBetweenDirections <= coneAngle / 2 then
-                        local distanceToUnit = self:GetDistanceSqr2(myHeroPos, unitPos)
-
-                        if distanceToUnit <= checkRadius * checkRadius then
-                            return true
-                        end
-                    end
-                end
-                return false
-            end
-
-            if collision["Hero"] then
-                local enemyHeroes = self:GetEnemyHeroes(myHeroPos, ability.range)
-                if checkUnits(enemyHeroes) then
-                    return true
-                end
-            end
-
-            if collision["Minion"] then
-                local enemyMinions = self:GetEnemyMinions(myHeroPos, ability.range)
-                if checkUnits(enemyMinions) then
-                    return true
-                end
-            end
-        end
-    end
-    return false
-end
-
-
 
 function ShaunPrediction:getStabilityThreshold()
     local stabilitySetting = menu:get_value(menu_stabilityThreshold)
@@ -218,7 +131,7 @@ function ShaunPrediction:getStabilityThreshold()
 end
 
 function ShaunPrediction:calculateDodgeFactor(clickFrequency)
-    local maxDodgeFactor = 0.5 -- maximum dodge factor
+    local maxDodgeFactor = 0.3 -- maximum dodge factor
     return maxDodgeFactor * (1 - math.exp(-clickFrequency))
 end
 
@@ -266,17 +179,23 @@ function ShaunPrediction:calculateHitChance(target, ability, source, predictedPo
     local distanceDifference = math.abs(self:GetDistanceSqr2(myHeroPos, predictedPosition) - self:GetDistanceSqr2(myHeroPos, targetPos))
     local totalRadius
     if ability.type == "linear" then
-        if self:checkCollision(myHeroPos, predictedPosition, ability, target) then
-            return nil
+        if next(ability.collision) ~= nil then
+            local c = _G.Prediction:get_collision(ability, predictedPosition, target)
+            if next(c) ~= nil then
+                return nil
+            end
         end
-        totalRadius = target.bounding_radius + ability.width / 2
+        totalRadius = target.bounding_radius + ability.radius
 
     elseif ability.type == "circular" then
         totalRadius = target.bounding_radius + ability.radius
 
     elseif ability.type == "cone" then
-        if self:checkCollision(myHeroPos, predictedPosition, ability, target) then
-            return nil
+        if next(ability.collision) ~= nil then
+            local c = _G.Prediction:get_collision(ability, predictedPosition, target)
+            if next(c) ~= nil then
+                return nil
+            end
         end
         totalRadius = target.bounding_radius + math.tan(math.rad(ability.angle / 2)) * distanceToTarget
     end
@@ -357,13 +276,18 @@ function ShaunPrediction:calculatePredictedPosition(target, ability, source)
                 remainingTravelTime = remainingTravelTime - timeToReachNextWaypoint
                 predictedPosition = nextWaypoint
             else
-                if nextWaypoint and currentWaypoint then
-                    local directionToNextWaypoint = self:Sub(nextWaypoint, currentWaypoint)
-                    local moveSpeed = targetPath.is_dashing and targetPath.dash_speed or target.move_speed
-                    local directionToNextWaypointNormalized = self:Normalize(directionToNextWaypoint)
-                    predictedPosition = self:Add(currentWaypoint, self:Mul(directionToNextWaypointNormalized, remainingTravelTime * moveSpeed))
-                    break
+                -- Target is dashing, use the dash position as the predicted position
+                if targetPath.is_dashing then
+                    predictedPosition = vec3.new(targetPath.dash_pos.x, targetPath.dash_pos.y, targetPath.dash_pos.z)
+                else
+                    if nextWaypoint and currentWaypoint then
+                        local directionToNextWaypoint = self:Sub(nextWaypoint, currentWaypoint)
+                        local moveSpeed = target.move_speed
+                        local directionToNextWaypointNormalized = self:Normalize(directionToNextWaypoint)
+                        predictedPosition = self:Add(currentWaypoint, self:Mul(directionToNextWaypointNormalized, remainingTravelTime * moveSpeed))
+                    end
                 end
+                break
             end
         end
 
@@ -389,7 +313,6 @@ function ShaunPrediction:calculatePrediction(target, ability, source)
     if not predictedPosition then
         return nil
     end
-
     menu_output = predictedPosition
 
     local useStabilityThreshold = menu:get_value(menu_enableStability) == 1
@@ -406,7 +329,6 @@ function ShaunPrediction:calculatePrediction(target, ability, source)
     end
 
     menu_hitchance = hitChance
-
     return {
         castPos = predictedPosition,
         hitChance = hitChance,
@@ -416,7 +338,7 @@ end
 if not MenuInitialized then
     do
         local function Update()
-            local version = 0.3
+            local version = 0.35
             local file_name = "ShaunPrediction.lua"
             local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/ShaunPrediction.lua"
             local web_version = http:get("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/ShaunPrediction.lua.version.txt")
