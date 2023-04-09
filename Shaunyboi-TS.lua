@@ -1,7 +1,7 @@
 local ts_loaded = package.loaded["Shaunyboi-TS"]
 if not ts_loaded then return end
 
-local menu_version = 0.2
+local menu_version = 0.3
 local ShaunPred = require "ShaunPrediction"
 local isMouseButtonDown = false
 local collision = _G.Prediction
@@ -286,7 +286,7 @@ end
 if not _G.ShaunyTSInitialized then
     do
         local function Update()
-            local version = 0.2
+            local version = 0.3
             local file_name = "Shaunyboi-TS.lua"
             local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-TS.lua"
             local web_version = http:get("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-TS.lua.version.txt")
@@ -336,8 +336,8 @@ if not _G.ShaunyTSInitialized then
     m_table[5] = "Champion Prioity Sorting Only"
     ts_method_selection = menu:add_dropdown("Method Selection", ts_method, m_table, 0)
 
-    pred = menu:add_subcategory("Shaun Prediction Hit Chance Filtering", ts_category)
-    pred_filter = menu:add_slider("Minimum Target Selected Hit Chance", pred, 1, 100, 45)
+    pred_menu = menu:add_subcategory("Shaun Prediction Hit Chance Filtering", ts_category)
+    pred_filter = menu:add_slider("Minimum Target Selected Hit Chance", pred_menu, 1, 100, 45)
 
     ts_force = menu:add_checkbox("Use Left Click Force", ts_category, 1)
     ts_draw = menu:add_checkbox("Draw Selected Target", ts_category, 1)
