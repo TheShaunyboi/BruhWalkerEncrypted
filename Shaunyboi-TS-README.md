@@ -51,6 +51,8 @@ locally the player can now change;
     Minimum Target Selected Hit Chance
 
 ```
+Menu as of v0.2
+
 ![image](https://user-images.githubusercontent.com/82087018/211559535-7b7f665a-4eeb-4101-824c-3dfcfb2b85d5.png)
 ![image](https://user-images.githubusercontent.com/82087018/230791844-8cdf4877-f361-401b-9b56-b5aa4565f504.png)
 
