@@ -1,9 +1,8 @@
 local pred_loaded = package.loaded["ShaunPrediction"]
 if not pred_loaded then return end
 
-MenuInitialized = MenuInitialized or false
 local ShaunPrediction = {}
-local menu_version = 0.35
+local menu_version = 0.4
 local menu_hitchance
 local menu_target
 local menu_output
@@ -335,10 +334,10 @@ function ShaunPrediction:calculatePrediction(target, ability, source)
     }
 end
 
-if not MenuInitialized then
+if not _G.ShaunPredictionInitialized then
     do
         local function Update()
-            local version = 0.35
+            local version = 0.4
             local file_name = "ShaunPrediction.lua"
             local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/ShaunPrediction.lua"
             local web_version = http:get("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/ShaunPrediction.lua.version.txt")
@@ -353,8 +352,8 @@ if not MenuInitialized then
     end
 end
 
-if not MenuInitialized then
-    MenuInitialized = true
+if not _G.ShaunPredictionInitialized then
+    _G.ShaunPredictionInitialized = true
 
     if file_manager:file_exists("Shaun's Sexy Common//Logo.png") then
         pred_category = menu:add_category_sprite("Shaun Prediction", "Shaun's Sexy Common//Logo.png")
