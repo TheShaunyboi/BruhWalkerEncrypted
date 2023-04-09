@@ -26,7 +26,7 @@ spell_data = {
     collision = {"minion", "wind_wall", "enemy_hero"}, type = "linear", hitbox = true
 }
 
-local function on_tick_always()
+local function on_tick()
     local target, pred = ts:SelectTarget(spell_data, true, true)
     if target and pred and pred.hitChance >= 0.45 then
         local p = pred.castPos
