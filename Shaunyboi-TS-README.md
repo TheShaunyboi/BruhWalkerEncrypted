@@ -1,6 +1,6 @@
 
 ```lua
-required inputs 
+**required inputs**
 SelectTarget(spell_data, checkCollision, pred)
 
 **Spell data table**
