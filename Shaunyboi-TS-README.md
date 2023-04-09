@@ -16,7 +16,8 @@ The spell date needs to be populated with the correct collision inputs for the s
 
 **pred**
 enter 'true' if you require ShaunPrediction usage with target selction filtering, enter 'false' if not.
-This will use the menu "Shaun Prediction Hit Chance Filtering" value and sort best targets that have a hit chance equal or above that value. This will lead to a better overall target selection and a higher/faster cast rate.
+This will use the menu "Shaun Prediction Hit Chance Filtering" value and sort best targets that have a hit chance >= filtering %. 
+This will lead to a better overall target selection and a higher/faster cast rate.
 ```
 
 ```lua
