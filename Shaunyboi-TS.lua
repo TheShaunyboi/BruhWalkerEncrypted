@@ -1,16 +1,25 @@
-local TargetSelector = {}
+local ts_loaded = package.loaded["Shaunyboi-TS"]
+if not ts_loaded then return end
+
+local menu_version = 0.2
+local ShaunPred = require "ShaunPrediction"
+local isMouseButtonDown = false
 local collision = _G.Prediction
 local forced_target = nil
 local targetSelection = nil
-local ts_loaded = package.loaded["Shaunyboi-TS"]
+local menu_draw = nil
 local myHero = game.local_player
 
-function TargetSelector:new(spell_data, checkCollision)
+local TargetSelector = {}
+
+function TargetSelector:new(spell_data, checkCollision, pred)
     local o = {}
     setmetatable(o, self)
     self.__index = self
+    o.pred = pred or false
     o.checkCollision = checkCollision
     o.spell_data = spell_data
+    o.pred_output = nil
     o.selectedTarget = nil
     o.collidingTargets = {}
     o.remainingTargets = {}
@@ -29,11 +38,11 @@ function TargetSelector:GetEnemyHeroes()
 end
 
 function TargetSelector:SortByDistanceToMouse(targets)
-    table.sort(targets, function(a, b) return GetDistanceToMouse(a) < GetDistanceToMouse(b) end)
+    table.sort(targets, function(a, b) return self:GetDistanceToMouse(a) < self:GetDistanceToMouse(b) end)
     return targets
 end
   
-function GetDistanceToMouse(unit)
+function TargetSelector:GetDistanceToMouse(unit)
     local mousePos = game.mouse_pos
     if unit and mousePos then
         local dx = unit.origin.x - mousePos.x
@@ -44,23 +53,14 @@ function GetDistanceToMouse(unit)
     end
 end
 
-local isMouseButtonDown = false
-function on_wnd_proc(msg, wparam)
-    if msg == 513 and wparam == 1 then
-        isMouseButtonDown = true
-    elseif msg == 514 and wparam == 0 then
-        isMouseButtonDown = false
-    end
-end
-
-function isValid(unit)
+function TargetSelector:isValid(unit)
     if (unit and unit.is_targetable and unit.is_alive and unit.is_visible and unit.object_id and unit.health > 0) then
         return true
     end
     return false
 end
 
-function SelectionMethod()
+function TargetSelector:SelectionMethod()
     if menu:get_value(ts_method_selection) == 0 then
         selection = "TARGET_LOW_HP_PRIORITY"
     elseif menu:get_value(ts_method_selection) == 1 then
@@ -123,10 +123,11 @@ function TargetSelector:SortByPriority(targets)
     return targets
 end
     
-function TargetSelector:SelectTarget(spell_data, checkCollision)
+function TargetSelector:SelectTarget(spell_data, checkCollision, pred)
     
     -- Return selection method
-    targetSelection = SelectionMethod()
+    local targetSelection = self:SelectionMethod()
+    local filteringHitChance = menu:get_value(pred_filter) / 100
 
     -- If we have no forced targets, run selection method
     if forced_target == nil then
@@ -136,10 +137,18 @@ function TargetSelector:SelectTarget(spell_data, checkCollision)
             self.remainingTargets = self:SortByPriority(self.remainingTargets)
             self.validTargets = {}
             for i, target in ipairs(self.remainingTargets) do
-                if isValid(target) and myHero:distance_to(target.origin) <= spell_data.range then
-                    local c = collision:get_collision(spell_data, vec3.new(target.origin.x, target.origin.y, target.origin.z), target)
-                    if (not checkCollision or next(c) == nil) then
-                        table.insert(self.validTargets, target)
+                if self:isValid(target) and myHero:distance_to(target.origin) <= spell_data.range then
+                    if pred then
+                        local output = ShaunPred:calculatePrediction(target, spell_data, myHero)
+                        if output and output.castPos and output.hitChance >= filteringHitChance then
+                            table.insert(self.validTargets, target)
+                            self.pred_output = output
+                        end
+                    else
+                        local c = collision:get_collision(spell_data, vec3.new(target.origin.x, target.origin.y, target.origin.z), target)
+                        if (not checkCollision or next(c) == nil) then
+                            table.insert(self.validTargets, target)
+                        end
                     end
                 end
             end
@@ -152,10 +161,18 @@ function TargetSelector:SelectTarget(spell_data, checkCollision)
             self.remainingTargets = self:SortByPriority(self.remainingTargets)
             self.validTargets = {}
             for i, target in ipairs(self.remainingTargets) do
-                if isValid(target) and myHero:distance_to(target.origin) <= spell_data.range then
-                    local c = collision:get_collision(spell_data, vec3.new(target.origin.x, target.origin.y, target.origin.z), target)
-                    if (not checkCollision or next(c) == nil) then
-                        table.insert(self.validTargets, target)
+                if self:isValid(target) and myHero:distance_to(target.origin) <= spell_data.range then
+                    if pred then
+                        local output = ShaunPred:calculatePrediction(target, spell_data, myHero)
+                        if output and output.castPos and output.hitChance >= filteringHitChance then
+                            table.insert(self.validTargets, target)
+                            self.pred_output = output
+                        end
+                    else
+                        local c = collision:get_collision(spell_data, vec3.new(target.origin.x, target.origin.y, target.origin.z), target)
+                        if (not checkCollision or next(c) == nil) then
+                            table.insert(self.validTargets, target)
+                        end
                     end
                 end
             end
@@ -168,10 +185,18 @@ function TargetSelector:SelectTarget(spell_data, checkCollision)
             self.remainingTargets = self:SortByPriority(self.remainingTargets)
             self.validTargets = {}
             for i, target in ipairs(self.remainingTargets) do
-                if isValid(target) and myHero:distance_to(target.origin) <= spell_data.range then
-                    local c = collision:get_collision(spell_data, vec3.new(target.origin.x, target.origin.y, target.origin.z), target)
-                    if (not checkCollision or next(c) == nil) then
-                        table.insert(self.validTargets, target)
+                if self:isValid(target) and myHero:distance_to(target.origin) <= spell_data.range then
+                    if pred then
+                        local output = ShaunPred:calculatePrediction(target, spell_data, myHero)
+                        if output and output.castPos and output.hitChance >= filteringHitChance then
+                            table.insert(self.validTargets, target)
+                            self.pred_output = output
+                        end
+                    else
+                        local c = collision:get_collision(spell_data, vec3.new(target.origin.x, target.origin.y, target.origin.z), target)
+                        if (not checkCollision or next(c) == nil) then
+                            table.insert(self.validTargets, target)
+                        end
                     end
                 end
             end
@@ -184,10 +209,18 @@ function TargetSelector:SelectTarget(spell_data, checkCollision)
             self.remainingTargets = self:SortByDistanceToMouse(self.remainingTargets)
             self.validTargets = {}
             for i, target in ipairs(self.remainingTargets) do
-                if isValid(target) and myHero:distance_to(target.origin) <= spell_data.range then
-                    local c = collision:get_collision(spell_data, vec3.new(target.origin.x, target.origin.y, target.origin.z), target)
-                    if (not checkCollision or next(c) == nil) then
-                        table.insert(self.validTargets, target)
+                if self:isValid(target) and myHero:distance_to(target.origin) <= spell_data.range then
+                    if pred then
+                        local output = ShaunPred:calculatePrediction(target, spell_data, myHero)
+                        if output and output.castPos and output.hitChance >= filteringHitChance then
+                            table.insert(self.validTargets, target)
+                            self.pred_output = output
+                        end
+                    else
+                        local c = collision:get_collision(spell_data, vec3.new(target.origin.x, target.origin.y, target.origin.z), target)
+                        if (not checkCollision or next(c) == nil) then
+                            table.insert(self.validTargets, target)
+                        end
                     end
                 end
             end
@@ -199,10 +232,18 @@ function TargetSelector:SelectTarget(spell_data, checkCollision)
             self.remainingTargets = self:SortByPriority(self.remainingTargets)
             self.validTargets = {}
             for i, target in ipairs(self.remainingTargets) do
-                if isValid(target) and myHero:distance_to(target.origin) <= spell_data.range then
-                    local c = collision:get_collision(spell_data, vec3.new(target.origin.x, target.origin.y, target.origin.z), target)
-                    if (not checkCollision or next(c) == nil) then
-                        table.insert(self.validTargets, target)
+                if self:isValid(target) and myHero:distance_to(target.origin) <= spell_data.range then
+                    if pred then
+                        local output = ShaunPred:calculatePrediction(target, spell_data, myHero)
+                        if output and output.castPos and output.hitChance >= filteringHitChance then
+                            table.insert(self.validTargets, target)
+                            self.pred_output = output
+                        end
+                    else
+                        local c = collision:get_collision(spell_data, vec3.new(target.origin.x, target.origin.y, target.origin.z), target)
+                        if (not checkCollision or next(c) == nil) then
+                            table.insert(self.validTargets, target)
+                        end
                     end
                 end
             end
@@ -215,7 +256,7 @@ function TargetSelector:SelectTarget(spell_data, checkCollision)
         self.remainingTargets = self:GetEnemyHeroes()
         self.validTargets = {}
         for i, target in ipairs(self.remainingTargets) do
-            if GetDistanceToMouse(target) < 150 then        
+            if self:GetDistanceToMouse(target) < 150 then        
                 table.insert(self.validTargets, target)
             end
         end
@@ -223,36 +264,60 @@ function TargetSelector:SelectTarget(spell_data, checkCollision)
         forced_target = self.selectedTarget
     end
 
-    if forced_target ~= nil then
+    if forced_target then
         local disable_range = spell_data.range + 150
-        if myHero:distance_to(forced_target.origin) >= disable_range or not isValid(forced_target) then
+        if myHero:distance_to(forced_target.origin) >= disable_range or not self:isValid(forced_target) then
             forced_target = nil 
         end
     end
 
-    -- Draw target selected if menu option is enabled
-    if self.selectedTarget and menu:get_value(ts_draw) == 1 then 
-        renderer:draw_circle(self.selectedTarget.origin.x, self.selectedTarget.origin.y, self.selectedTarget.origin.z, 50, 0, 255, 255, 255)
-    end
-
-    return self.selectedTarget
+    menu_draw = self.selectedTarget
+    return self.selectedTarget, (self.pred_output or nil)
 end
 
-do
-    local function Update()
-		local version = 0.1
-		local file_name = "Shaunyboi-TS.lua"
-		local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-TS.lua"
-        local web_version = http:get("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-TS.lua.version.txt")
-		if tonumber(web_version) ~= version then
-            console:log("Shaunyboi Target Selector Updated")
-            console:log("Please Reload via F5")
+function on_wnd_proc(msg, wparam)
+    if msg == 513 and wparam == 1 then
+        isMouseButtonDown = true
+    elseif msg == 514 and wparam == 0 then
+        isMouseButtonDown = false
+    end
+end
+
+if not _G.ShaunyTSInitialized then
+    do
+        local function Update()
+            local version = 0.2
+            local file_name = "Shaunyboi-TS.lua"
+            local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-TS.lua"
+            local web_version = http:get("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-TS.lua.version.txt")
+            if tonumber(web_version) ~= version then
+                console:log("Shaunyboi Target Selector Updated")
+                console:log("Please Reload via F5")
+            end
         end
+        Update()
     end
-    Update()
+
+    if not file_manager:file_exists("Prediction.lib") then
+        local file_name = "Prediction.lib"
+        local url = "https://raw.githubusercontent.com/Ark223/Bruhwalker/main/Prediction.lib"
+        http:download_file(url, file_name)
+        console:log("Ark Prediction Downloaded")
+        console:log("Please Reload via F5")
+    end
+
+    if not file_manager:file_exists("ShaunPrediction.lua") then
+        local file_name = "ShaunPrediction.lua"
+        local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/ShaunPrediction.lua"
+        http:download_file(url, file_name)
+        console:log("Shaun Prediction Downloaded")
+        console:log("Please Reload via F5")
+    end
 end
 
-if ts_loaded then
+if not _G.ShaunyTSInitialized then
+    _G.ShaunyTSInitialized = true
+
     console:log("[Shaun's Target Selector] Initiated Successfully")
 
     if file_manager:file_exists("Shaun's Sexy Common//Logo.png") then
@@ -271,18 +336,21 @@ if ts_loaded then
     m_table[5] = "Champion Prioity Sorting Only"
     ts_method_selection = menu:add_dropdown("Method Selection", ts_method, m_table, 0)
 
+    pred = menu:add_subcategory("Shaun Prediction Hit Chance Filtering", ts_category)
+    pred_filter = menu:add_slider("Minimum Target Selected Hit Chance", pred, 1, 100, 45)
+
     ts_force = menu:add_checkbox("Use Left Click Force", ts_category, 1)
     ts_draw = menu:add_checkbox("Draw Selected Target", ts_category, 1)
+    menu:add_label("Version "..tostring(menu_version), ts_category)
 end
 
-local file_name = "Prediction.lib"
-if not file_manager:file_exists(file_name) then
-   local url = "https://raw.githubusercontent.com/Ark223/Bruhwalker/main/Prediction.lib"
-   http:download_file(url, file_name)
-   console:log("Ark Prediction Library Downloaded")
-   console:log("Please Reload via F5")
+local function on_draw()
+    if menu:get_value(ts_draw) == 1 and menu_draw then 
+        renderer:draw_circle(menu_draw.origin.x, menu_draw.origin.y, menu_draw.origin.z, 50, 0, 255, 255, 255)
+    end
 end
 
 client:set_event_callback("on_wnd_proc", on_wnd_proc)
+client:set_event_callback("on_draw", on_draw)
 return TargetSelector
  
