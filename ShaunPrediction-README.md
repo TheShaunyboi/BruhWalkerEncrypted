@@ -24,7 +24,15 @@ local function on_tick()
     end
 end
 ```
-Menu as of v0.4
+```lua
+ShaunPrediction menu will populate if require() has been requested. 
+locally the player can now change;
+
+- Enable & disable "Dodge Factor" - This will adjust hitchance if the target is changing waypoints/clicking like T1-Faker [APM]
+- Enable & disable "Hit Chance Stability" check - Select your calculation threshold between fast/medium/slow [BETA]
+- Enable & disable "Debug Draws" - Show Hit chance on target & prediction position output circle draw
+```
+Menu as of v0.4 [BETA]
 
 ![image](https://user-images.githubusercontent.com/82087018/230792601-635c34a4-9ab8-4fd5-a3a6-8166977a7a67.png)
 ![image](https://user-images.githubusercontent.com/82087018/230792621-0bfbbb93-cfff-4cf7-b113-021323a7dd5a.png)
