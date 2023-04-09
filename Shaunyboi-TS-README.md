@@ -6,7 +6,8 @@ SelectTarget(spell_data, checkCollision, pred)
 **Spell data table**
 Spell type support = "circular", "linear" & "cone"
 "radius" used for "circular" & "linear" - "angle" required for spell type "cone"
-All collision inputs, enter which match the spell
+
+**All collision inputs, enter which match the spell**
 {"minion", "ally_hero", "enemy_hero", "wind_wall", "terrain_wall"}
 
 **checkCollision**
