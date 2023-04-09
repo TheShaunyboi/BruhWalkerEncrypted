@@ -3,31 +3,24 @@
 required inputs 
 SelectTarget(spell_data, checkCollision, pred)
 
-spell_data
-This is a table filled with spell data.
-
-Example Ezreal 'Q' spell data
-local myHero = game.local_player
-spell_data = {
-    source = myHero, speed = 2000, range = 1180, delay = 0.25, radius = 60, 
-    collision = {"minion", "wind_wall", "enemy_hero"}, type = "linear", hitbox = true
-}
-
-checkCollision
-enter 'true' if spell has collision, enter 'false' if the spell has no collision. 
-
-if checkCollision is true for the spell
-The spell date needs to be populated with the correct collision inputs for the spell.
-
-pred
-enter 'true' if you require ShaunPrediction usage with target selction hit chance filtering, enter 'false' if not. 
-
-  
-Example.. Ezreal 'Q'
-collision = {"minion", "wind_wall", "enemy_hero"}
+Spell data table
+Spell type support = "circular", "linear" & "cone"
+"radius" used for "circular" & "linear" - spell "angle" required for type "cone"
 
 All collision inputs, enter which match the spell
 {"minion", "ally_hero", "enemy_hero", "wind_wall", "terrain_wall"}
+
+linear example table input below
+spell_data = {
+    source = myHero, speed = 2000, range = 1180, delay = 0.25, radius = 60, 
+    collision = {"minion", "wind_wall", "enemy_hero"}, type = "linear", hitbox = true
+
+checkCollision
+enter 'true' if spell has collision, enter 'false' if the spell has no collision. 
+The spell date needs to be populated with the correct collision inputs for the spell.
+
+pred
+enter 'true' if you require ShaunPrediction usage with target selction filtering, enter 'false' if not. 
 ```
 
 ```lua
