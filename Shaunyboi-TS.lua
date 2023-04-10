@@ -1,7 +1,7 @@
 local ts_loaded = package.loaded["Shaunyboi-TS"]
 if not ts_loaded then return end
 
-local menu_version = 0.3
+local menu_version = 0.4
 local ShaunPred = require "ShaunPrediction"
 local isMouseButtonDown = false
 local collision = _G.Prediction
@@ -286,13 +286,16 @@ end
 if not _G.ShaunyTSInitialized then
     do
         local function Update()
-            local version = 0.3
+            local version = 0.4
             local file_name = "Shaunyboi-TS.lua"
             local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-TS.lua"
             local web_version = http:get("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-TS.lua.version.txt")
-            if tonumber(web_version) ~= version then
-                console:log("Shaunyboi Target Selector Updated")
-                console:log("Please Reload via F5")
+            if tonumber(web_version) == version then
+                console:log("[Shaun's Target Selector] Initiated Successfully")
+            else
+                http:download_file(url, file_name)
+                console:log("Shaun's Target Selector Updated..")
+                console:log("Please reload via F5..")
             end
         end
         Update()
@@ -317,8 +320,6 @@ end
 
 if not _G.ShaunyTSInitialized then
     _G.ShaunyTSInitialized = true
-
-    console:log("[Shaun's Target Selector] Initiated Successfully")
 
     if file_manager:file_exists("Shaun's Sexy Common//Logo.png") then
         ts_category = menu:add_category_sprite("Shaun's Target Selector", "Shaun's Sexy Common//Logo.png")
