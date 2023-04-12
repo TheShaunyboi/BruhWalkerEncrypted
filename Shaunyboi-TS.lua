@@ -1,7 +1,7 @@
 local ts_loaded = package.loaded["Shaunyboi-TS"]
 if not ts_loaded then return end
 
-local menu_version = 0.4
+local menu_version = 0.5
 local ShaunPred = require "ShaunPrediction"
 local isMouseButtonDown = false
 local collision = _G.Prediction
@@ -140,7 +140,7 @@ function TargetSelector:SelectTarget(spell_data, checkCollision, pred)
                 if self:isValid(target) and myHero:distance_to(target.origin) <= spell_data.range then
                     if pred then
                         local output = ShaunPred:calculatePrediction(target, spell_data, myHero)
-                        if output and output.castPos and output.hitChance >= filteringHitChance then
+                        if output and output.castPos then
                             table.insert(self.validTargets, target)
                             self.pred_output = output
                         end
@@ -164,7 +164,7 @@ function TargetSelector:SelectTarget(spell_data, checkCollision, pred)
                 if self:isValid(target) and myHero:distance_to(target.origin) <= spell_data.range then
                     if pred then
                         local output = ShaunPred:calculatePrediction(target, spell_data, myHero)
-                        if output and output.castPos and output.hitChance >= filteringHitChance then
+                        if output and output.castPos then
                             table.insert(self.validTargets, target)
                             self.pred_output = output
                         end
@@ -188,7 +188,7 @@ function TargetSelector:SelectTarget(spell_data, checkCollision, pred)
                 if self:isValid(target) and myHero:distance_to(target.origin) <= spell_data.range then
                     if pred then
                         local output = ShaunPred:calculatePrediction(target, spell_data, myHero)
-                        if output and output.castPos and output.hitChance >= filteringHitChance then
+                        if output and output.castPos then
                             table.insert(self.validTargets, target)
                             self.pred_output = output
                         end
@@ -212,7 +212,7 @@ function TargetSelector:SelectTarget(spell_data, checkCollision, pred)
                 if self:isValid(target) and myHero:distance_to(target.origin) <= spell_data.range then
                     if pred then
                         local output = ShaunPred:calculatePrediction(target, spell_data, myHero)
-                        if output and output.castPos and output.hitChance >= filteringHitChance then
+                        if output and output.castPos then
                             table.insert(self.validTargets, target)
                             self.pred_output = output
                         end
@@ -235,7 +235,7 @@ function TargetSelector:SelectTarget(spell_data, checkCollision, pred)
                 if self:isValid(target) and myHero:distance_to(target.origin) <= spell_data.range then
                     if pred then
                         local output = ShaunPred:calculatePrediction(target, spell_data, myHero)
-                        if output and output.castPos and output.hitChance >= filteringHitChance then
+                        if output and output.castPos then
                             table.insert(self.validTargets, target)
                             self.pred_output = output
                         end
@@ -286,7 +286,7 @@ end
 if not _G.ShaunyTSInitialized then
     do
         local function Update()
-            local version = 0.4
+            local version = 0.5
             local file_name = "Shaunyboi-TS.lua"
             local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-TS.lua"
             local web_version = http:get("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-TS.lua.version.txt")
