@@ -1,14 +1,16 @@
 do
     local function AutoUpdate()
-		local version = 0.2
-		local file_name = "Shauns-ChampionAIO"
+		local version = 0.3
+		local file_name = "Shauns-ChampionAIO.lua"
 		local aio_url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shauns-ChampionAIO.lua"
-        local web_version = http:get("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shauns-ChampionAIO.lua.version.txt")
-		if tonumber(web_version) ~= version then
-			http:download_file(aio_url, file_name)
-			console:log("Shaun's AIO Updated Downloaded")
-			console:log("Please Reload via F5!")
-        end
+        http:get_async("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shauns-ChampionAIO.lua.version.txt", function(success, web_version)
+			if tonumber(web_version) ~= version then
+				http:download_file_async(aio_url, file_name, function(success)
+					console:log("Shaun's AIO Updated Downloaded")
+					console:log("Please Reload via F5!")
+				end)
+			end
+		end)
     end
     AutoUpdate()
 end
@@ -25,8 +27,20 @@ function load_and_run_file(filename)
 	  console:log("Shaun's Champion AIO Message")
 	  console:log("Downloading Champion Script..")
 	  local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/" .. filename
-	  local success = http:download_file(url, "Shaun's Sexy Common//" .. filename)
-	  console:log("Downloaded " .. filename .. " Please Reload via F5!")
+	  http:download_file_async(url, "Shaun's Sexy Common//" .. filename, function(success)
+		if file_manager:file_exists("Shaun's Sexy Common//" .. filename) then
+			-- File found, read and run it
+			local filepath = os.getenv('LOCALAPPDATA') .."/leaguesense/scripts/Shaun's Sexy Common/" .. filename
+			local file = io.open(filepath, "r")
+			local contents = file:read("*all")
+			file:close()
+			local chunk, err = load(contents)
+			if err then
+			console:log(err)
+			end
+			chunk()
+		end
+	  end)
 	  return
 	else
 	  -- File found, read and run it
