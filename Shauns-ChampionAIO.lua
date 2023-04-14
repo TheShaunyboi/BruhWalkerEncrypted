@@ -1,6 +1,6 @@
 do
     local function AutoUpdate()
-		local version = 0.3
+		local version = 0.4
 		local file_name = "Shauns-ChampionAIO.lua"
 		local aio_url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shauns-ChampionAIO.lua"
         http:get_async("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shauns-ChampionAIO.lua.version.txt", function(success, web_version)
@@ -27,6 +27,7 @@ function load_and_run_file(filename)
 	  console:log("Shaun's Champion AIO Message")
 	  console:log("Downloading Champion Script..")
 	  local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/" .. filename
+	  console:log(filename)
 	  http:download_file_async(url, "Shaun's Sexy Common//" .. filename, function(success)
 		if file_manager:file_exists("Shaun's Sexy Common//" .. filename) then
 			-- File found, read and run it
@@ -244,7 +245,7 @@ elseif champ_name == "Zeri" then
 		load_and_run_file(lua_name)
 	end
 elseif champ_name == "Xayah" then
-	local lua_name = "Xayah-FeatherFetish"
+	local lua_name = "Xayah-FeatherFetish.lua"
 	if not file_manager:file_exists(lua_name) then
 		load_and_run_file(lua_name)
 	end
