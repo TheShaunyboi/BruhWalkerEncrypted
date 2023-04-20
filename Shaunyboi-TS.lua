@@ -1,7 +1,7 @@
 local ts_loaded = package.loaded["Shaunyboi-TS"]
 if not ts_loaded then return end
 
-local menu_version = 0.5
+local menu_version = 0.6
 local ShaunPred = require "ShaunPrediction"
 local isMouseButtonDown = false
 local collision = _G.Prediction
@@ -286,36 +286,43 @@ end
 if not _G.ShaunyTSInitialized then
     do
         local function Update()
-            local version = 0.5
+            local version = 0.6
             local file_name = "Shaunyboi-TS.lua"
             local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-TS.lua"
-            local web_version = http:get("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-TS.lua.version.txt")
-            if tonumber(web_version) == version then
-                console:log("[Shaun's Target Selector] Initiated Successfully")
-            else
-                http:download_file(url, file_name)
-                console:log("Shaun's Target Selector Updated..")
-                console:log("Please reload via F5..")
-            end
+            
+            http:get_async("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-TS.lua.version.txt", function(success, web_version)
+				if tonumber(web_version) == version then
+                    console:log("[Shaun's Target Selector] Initiated Successfully")
+				else
+					http:download_file_async(url, file_name, function(success)
+						if success then
+                            console:log("Shaun's Target Selector Updated..")
+                            console:log("Please reload via F5..")
+						end
+					end)
+				end
+			end)
         end
         Update()
     end
 
-    if not file_manager:file_exists("Prediction.lib") then
+	if not file_manager:file_exists("Prediction.lib") then
         local file_name = "Prediction.lib"
         local url = "https://raw.githubusercontent.com/Ark223/Bruhwalker/main/Prediction.lib"
-        http:download_file(url, file_name)
-        console:log("Ark Prediction Downloaded")
-        console:log("Please Reload via F5")
-    end
+		http:download_file_async(url, file_name,function()
+            console:log("Ark Prediction Downloaded")
+            console:log("Please Reload via F5")
+		end)
+	end
 
-    if not file_manager:file_exists("ShaunPrediction.lua") then
+	if not file_manager:file_exists("ShaunPrediction.lua") then
         local file_name = "ShaunPrediction.lua"
         local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/ShaunPrediction.lua"
-        http:download_file(url, file_name)
-        console:log("Shaun Prediction Downloaded")
-        console:log("Please Reload via F5")
-    end
+		http:download_file_async(url, file_name,function()
+            console:log("Shaun Prediction Downloaded")
+            console:log("Please Reload via F5")
+		end)
+	end
 end
 
 if not _G.ShaunyTSInitialized then
@@ -324,7 +331,8 @@ if not _G.ShaunyTSInitialized then
     if file_manager:file_exists("Shaun's Sexy Common//Logo.png") then
         ts_category = menu:add_category_sprite("Shaun's Target Selector", "Shaun's Sexy Common//Logo.png")
     else
-        http:download_file("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Common/Logo.png", "Shaun's Sexy Common//Logo.png")
+        http:download_file_async("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Common/Logo.png", "Shaun's Sexy Common//Logo.png", function()
+        end)
         ts_category = menu:add_category("Shaun's Target Selector")
     end
 
