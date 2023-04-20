@@ -1,84 +1,17 @@
 local ts_loaded = package.loaded["Shaunyboi-TS"]
 if not ts_loaded then return end
 
-local menu_version = 0.6
+local menu_version = 0.7
 local ShaunPred = require "ShaunPrediction"
 local isMouseButtonDown = false
-local collision = _G.Prediction
 local forced_target = nil
+local clickedForced = nil
 local targetSelection = nil
 local menu_draw = nil
 local myHero = game.local_player
 
 local TargetSelector = {}
-
-function TargetSelector:new(spell_data, checkCollision, pred)
-    local o = {}
-    setmetatable(o, self)
-    self.__index = self
-    o.pred = pred or false
-    o.checkCollision = checkCollision
-    o.spell_data = spell_data
-    o.pred_output = nil
-    o.selectedTarget = nil
-    o.collidingTargets = {}
-    o.remainingTargets = {}
-    return o
-end
-
-function TargetSelector:GetEnemyHeroes()
-    local _EnemyHeroes = {}
-    players = game.players
-    for i, unit in ipairs(players) do
-        if unit and unit.is_enemy then
-            table.insert(_EnemyHeroes, unit)
-        end
-    end
-    return _EnemyHeroes
-end
-
-function TargetSelector:SortByDistanceToMouse(targets)
-    table.sort(targets, function(a, b) return self:GetDistanceToMouse(a) < self:GetDistanceToMouse(b) end)
-    return targets
-end
-  
-function TargetSelector:GetDistanceToMouse(unit)
-    local mousePos = game.mouse_pos
-    if unit and mousePos then
-        local dx = unit.origin.x - mousePos.x
-        local dz = (unit.origin.z or unit.origin.y) - (mousePos.z or mousePos.y)
-        return math.sqrt(dx * dx + dz * dz)
-    else
-        return math.huge
-    end
-end
-
-function TargetSelector:isValid(unit)
-    if (unit and unit.is_targetable and unit.is_alive and unit.is_visible and unit.object_id and unit.health > 0) then
-        return true
-    end
-    return false
-end
-
-function TargetSelector:SelectionMethod()
-    if menu:get_value(ts_method_selection) == 0 then
-        selection = "TARGET_LOW_HP_PRIORITY"
-    elseif menu:get_value(ts_method_selection) == 1 then
-        selection = "TARGET_MOST_AP"
-    elseif menu:get_value(ts_method_selection) == 2 then
-        selection = "TARGET_MOST_AD"
-    elseif menu:get_value(ts_method_selection) == 3 then
-        selection = "TARGET_NEAR_MOUSE"
-    elseif menu:get_value(ts_method_selection) == 4 then
-        selection = "TARGET_PRIORITY"
-    end
-    return selection
-end
-
-function TargetSelector:GetPriority(champion)
-    -- Returns the priority of the given champion
-    local priority = {
-
+local priority = {
     ["Aatrox"] = 3, ["Ahri"] = 4, ["Akali"] = 4, ["Akshan"] = 5, ["Alistar"] = 1,
     ["Amumu"] = 1, ["Anivia"] = 4, ["Annie"] = 4, ["Aphelios"] = 5, ["Ashe"] = 5,
     ["AurelionSol"] = 4, ["Azir"] = 4, ["Bard"] = 3, ["Belveth"] = 3, ["Blitzcrank"] = 1,
@@ -112,181 +45,180 @@ function TargetSelector:GetPriority(champion)
     ["Xayah"] = 5, ["Xerath"] = 4, ["Xinzhao"] = 3, ["Yasuo"] = 4, ["Yone"] = 4,
     ["Yorick"] = 2, ["Yuumi"] = 2, ["Zac"] = 1, ["Zed"] = 4, ["Zeri"] = 5,
     ["Ziggs"] = 4, ["Zilean"] = 3, ["Zoe"] = 4, ["Zyra"] = 3
+}
 
-    }
-    return priority[champion.champ_name] or math.huge
+function TargetSelector:new(spell_data, checkCollision, pred)
+    local o = {}
+    setmetatable(o, self)
+    self.__index = self
+    o.pred = pred or false
+    o.checkCollision = checkCollision
+    o.spell_data = spell_data
+    o.pred_output = nil
+    return o
 end
 
-function TargetSelector:SortByPriority(targets)
-    -- Sorts the given targets by priority
-    table.sort(targets, function(a, b) return self:GetPriority(a) > self:GetPriority(b) end)
+function TargetSelector:GetEnemyHeroes()
+    local enemyHeroes = {}
+    players = game.players
+    for i, unit in ipairs(players) do
+        if unit and unit.is_enemy then
+            table.insert(enemyHeroes, unit)
+        end
+    end
+    return enemyHeroes
+end
+
+function TargetSelector:SortByDistanceToMouse(targets)
+    table.sort(targets, function(a, b) return self:GetDistanceToMouse(a) < self:GetDistanceToMouse(b) end)
     return targets
+end
+  
+function TargetSelector:GetDistanceToMouse(unit)
+    local mousePos = game.mouse_pos
+    if unit and mousePos then
+        local dx = unit.origin.x - mousePos.x
+        local dz = (unit.origin.z or unit.origin.y) - (mousePos.z or mousePos.y)
+        return math.sqrt(dx * dx + dz * dz)
+    else
+        return math.huge
+    end
+end
+
+function TargetSelector:isValid(unit)
+    return unit and unit.is_enemy and unit.is_alive and unit.is_visible
+end
+
+function TargetSelector:SelectionMethod()
+    if menu:get_value(ts_method_selection) == 0 then
+        selection = "TARGET_LOW_HP_PRIORITY"
+    elseif menu:get_value(ts_method_selection) == 1 then
+        selection = "TARGET_MOST_AP"
+    elseif menu:get_value(ts_method_selection) == 2 then
+        selection = "TARGET_MOST_AD"
+    elseif menu:get_value(ts_method_selection) == 3 then
+        selection = "TARGET_NEAR_MOUSE"
+    elseif menu:get_value(ts_method_selection) == 4 then
+        selection = "TARGET_PRIORITY"
+    end
+    return selection
+end
+
+function TargetSelector:GetPriority(target)
+    -- Returns the priority of the given champion
+    return priority[target.champ_name] or 3
+end
+
+function TargetSelector:GetForcedTarget()
+    -- Select target based off left mouse click if menu option is enabled
+    if menu:get_value(ts_force) == 0 then return nil end
+
+    if isMouseButtonDown and not clickedForced then
+        for _, target in ipairs(self:GetEnemyHeroes()) do
+            if self:GetDistanceToMouse(target) <= 150 then        
+                clickedForced = target
+                return target
+            end
+        end
+    end
+
+    if clickedForced then
+        if (not myHero.is_alive or not clickedForced.is_visible) then
+            clickedForced = nil 
+            return nil
+        end
+        if isMouseButtonDown and self:GetDistanceToMouse(clickedForced) > 150 then
+            clickedForced = nil 
+            return nil
+        end
+    end
+    
+    return clickedForced
 end
     
 function TargetSelector:SelectTarget(spell_data, checkCollision, pred)
-    
     -- Return selection method
-    local targetSelection = self:SelectionMethod()
-    local filteringHitChance = menu:get_value(pred_filter) / 100
+    targetSelection = self:SelectionMethod()
+    forced_target = self:GetForcedTarget()
 
-    -- If we have no forced targets, run selection method
-    if forced_target == nil then
-        if targetSelection == "TARGET_LOW_HP_PRIORITY" then
-            -- Select target with lowest HP & uses priority
-            self.remainingTargets = self:GetEnemyHeroes()
-            self.remainingTargets = self:SortByPriority(self.remainingTargets)
-            self.validTargets = {}
-            for i, target in ipairs(self.remainingTargets) do
-                if self:isValid(target) and myHero:distance_to(target.origin) <= spell_data.range then
-                    if pred then
-                        local output = ShaunPred:calculatePrediction(target, spell_data, myHero)
-                        if output and output.castPos then
-                            table.insert(self.validTargets, target)
-                            self.pred_output = output
-                        end
-                    else
-                        local c = collision:get_collision(spell_data, vec3.new(target.origin.x, target.origin.y, target.origin.z), target)
-                        if (not checkCollision or next(c) == nil) then
-                            table.insert(self.validTargets, target)
-                        end
-                    end
+    -- If we have forced targets
+    if forced_target and myHero:distance_to(forced_target.origin) <= spell_data.range then
+        menu_draw = forced_target
+        return forced_target, (pred and ShaunPred:calculatePrediction(forced_target, spell_data, myHero) or nil)
+    end
+
+    -- Select target based on target selection method
+    local targets = self:GetEnemyHeroes()
+    if targetSelection == "TARGET_LOW_HP_PRIORITY" then
+        table.sort(targets, function(a, b)
+            if a.health ~= b.health then
+                return a.health < b.health
+            else
+                return self:GetPriority(a) > self:GetPriority(b)
+            end
+        end)
+    elseif targetSelection == "TARGET_MOST_AP" then
+        table.sort(targets, function(a, b)
+            if a.ability_power ~= b.ability_power then
+                return a.ability_power > b.ability_power
+            else
+                return self:GetPriority(a) > self:GetPriority(b)
+            end
+        end)
+    elseif targetSelection == "TARGET_MOST_AD" then
+        table.sort(targets, function(a, b)
+            if a.total_attack_damage ~= b.total_attack_damage then
+                return a.total_attack_damage > b.total_attack_damage
+            else
+                return self:GetPriority(a) > self:GetPriority(b)
+            end
+        end)
+    elseif targetSelection == "TARGET_NEAR_MOUSE" then
+        table.sort(targets, function(a, b)
+            if self:GetDistanceToMouse(a) ~= self:GetDistanceToMouse(b) then
+                return self:GetDistanceToMouse(a) < self:GetDistanceToMouse(b)
+            else
+                return self:GetPriority(a) > self:GetPriority(b)
+            end
+        end)
+    elseif targetSelection == "TARGET_PRIORITY" then
+        table.sort(targets, function(a, b)
+            return self:GetPriority(a) > self:GetPriority(b)
+        end)
+    end
+
+    -- Select valid targets and return the highest priority valid target
+    local validTargets = {}
+    for i, target in ipairs(targets) do
+        if self:isValid(target) and myHero:distance_to(target.origin) <= spell_data.range then
+            if pred then
+                local output = ShaunPred:calculatePrediction(target, spell_data, myHero)
+                if output and output.castPos then
+                    table.insert(validTargets, target)
+                    self.pred_output = output
+                end
+            else
+                local c = _G.Prediction:get_collision(spell_data, vec3.new(target.origin.x, target.origin.y, target.origin.z), target)
+                if (not checkCollision or next(c) == nil) then
+                    table.insert(validTargets, target)
                 end
             end
-            table.sort(self.validTargets, function(a, b) return a.health < b.health end)
-            self.selectedTarget = self.validTargets[1]
-
-        elseif targetSelection == "TARGET_MOST_AP" then
-            -- Select target with most AP & uses priority
-            self.remainingTargets = self:GetEnemyHeroes()
-            self.remainingTargets = self:SortByPriority(self.remainingTargets)
-            self.validTargets = {}
-            for i, target in ipairs(self.remainingTargets) do
-                if self:isValid(target) and myHero:distance_to(target.origin) <= spell_data.range then
-                    if pred then
-                        local output = ShaunPred:calculatePrediction(target, spell_data, myHero)
-                        if output and output.castPos then
-                            table.insert(self.validTargets, target)
-                            self.pred_output = output
-                        end
-                    else
-                        local c = collision:get_collision(spell_data, vec3.new(target.origin.x, target.origin.y, target.origin.z), target)
-                        if (not checkCollision or next(c) == nil) then
-                            table.insert(self.validTargets, target)
-                        end
-                    end
-                end
-            end
-            table.sort(self.validTargets, function(a, b) return a.ability_power > b.ability_power end)
-            self.selectedTarget = self.validTargets[1]
-
-        elseif targetSelection == "TARGET_MOST_AD" then
-            -- Select target with most AD & uses priority
-            self.remainingTargets = self:GetEnemyHeroes()
-            self.remainingTargets = self:SortByPriority(self.remainingTargets)
-            self.validTargets = {}
-            for i, target in ipairs(self.remainingTargets) do
-                if self:isValid(target) and myHero:distance_to(target.origin) <= spell_data.range then
-                    if pred then
-                        local output = ShaunPred:calculatePrediction(target, spell_data, myHero)
-                        if output and output.castPos then
-                            table.insert(self.validTargets, target)
-                            self.pred_output = output
-                        end
-                    else
-                        local c = collision:get_collision(spell_data, vec3.new(target.origin.x, target.origin.y, target.origin.z), target)
-                        if (not checkCollision or next(c) == nil) then
-                            table.insert(self.validTargets, target)
-                        end
-                    end
-                end
-            end
-            table.sort(self.validTargets, function(a, b) return a.total_attack_damage > b.total_attack_damage end)
-            self.selectedTarget = self.validTargets[1]
-
-        elseif targetSelection == "TARGET_NEAR_MOUSE" then
-            -- Select target closest to mouse cursor
-            self.remainingTargets = self:GetEnemyHeroes()
-            self.remainingTargets = self:SortByDistanceToMouse(self.remainingTargets)
-            self.validTargets = {}
-            for i, target in ipairs(self.remainingTargets) do
-                if self:isValid(target) and myHero:distance_to(target.origin) <= spell_data.range then
-                    if pred then
-                        local output = ShaunPred:calculatePrediction(target, spell_data, myHero)
-                        if output and output.castPos then
-                            table.insert(self.validTargets, target)
-                            self.pred_output = output
-                        end
-                    else
-                        local c = collision:get_collision(spell_data, vec3.new(target.origin.x, target.origin.y, target.origin.z), target)
-                        if (not checkCollision or next(c) == nil) then
-                            table.insert(self.validTargets, target)
-                        end
-                    end
-                end
-            end
-            self.selectedTarget = self.validTargets[1]
-
-        elseif targetSelection == "TARGET_PRIORITY" then
-            -- Select target with highest priority
-            self.remainingTargets = self:GetEnemyHeroes()
-            self.remainingTargets = self:SortByPriority(self.remainingTargets)
-            self.validTargets = {}
-            for i, target in ipairs(self.remainingTargets) do
-                if self:isValid(target) and myHero:distance_to(target.origin) <= spell_data.range then
-                    if pred then
-                        local output = ShaunPred:calculatePrediction(target, spell_data, myHero)
-                        if output and output.castPos then
-                            table.insert(self.validTargets, target)
-                            self.pred_output = output
-                        end
-                    else
-                        local c = collision:get_collision(spell_data, vec3.new(target.origin.x, target.origin.y, target.origin.z), target)
-                        if (not checkCollision or next(c) == nil) then
-                            table.insert(self.validTargets, target)
-                        end
-                    end
-                end
-            end
-            self.selectedTarget = self.validTargets[1]
         end
     end
-
-    -- Select target based off left mouse click if menu option is enabled
-    if menu:get_value(ts_force) == 1 and isMouseButtonDown then
-        self.remainingTargets = self:GetEnemyHeroes()
-        self.validTargets = {}
-        for i, target in ipairs(self.remainingTargets) do
-            if self:GetDistanceToMouse(target) < 150 then        
-                table.insert(self.validTargets, target)
-            end
-        end
-        self.selectedTarget = self.validTargets[1]
-        forced_target = self.selectedTarget
+    
+    if #validTargets > 0 then
+        menu_draw = validTargets[1]
+        return validTargets[1], (self.pred_output or nil)
     end
 
-    if forced_target then
-        local disable_range = spell_data.range + 150
-        if myHero:distance_to(forced_target.origin) >= disable_range or not self:isValid(forced_target) then
-            forced_target = nil 
-        end
-    end
-
-    menu_draw = self.selectedTarget
-    return self.selectedTarget, (self.pred_output or nil)
-end
-
-function on_wnd_proc(msg, wparam)
-    if msg == 513 and wparam == 1 then
-        isMouseButtonDown = true
-    elseif msg == 514 and wparam == 0 then
-        isMouseButtonDown = false
-    end
+    -- If no valid targets found, return nil
+    return nil
 end
 
 if not _G.ShaunyTSInitialized then
     do
         local function Update()
-            local version = 0.6
+            local version = 0.7
             local file_name = "Shaunyboi-TS.lua"
             local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-TS.lua"
             
@@ -353,9 +285,17 @@ if not _G.ShaunyTSInitialized then
     menu:add_label("Version "..tostring(menu_version), ts_category)
 end
 
-local function on_draw()
+function on_draw()
     if menu:get_value(ts_draw) == 1 and menu_draw then 
         renderer:draw_circle(menu_draw.origin.x, menu_draw.origin.y, menu_draw.origin.z, 50, 0, 255, 255, 255)
+    end
+end
+
+function on_wnd_proc(msg, wparam)
+    if msg == 513 and wparam == 1 then
+        isMouseButtonDown = true
+    elseif msg == 514 and wparam == 0 then
+        isMouseButtonDown = false
     end
 end
 
