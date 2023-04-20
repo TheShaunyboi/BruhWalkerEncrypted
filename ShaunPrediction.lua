@@ -2,7 +2,7 @@ local pred_loaded = package.loaded["ShaunPrediction"]
 if not pred_loaded then return end
 
 local ShaunPrediction = {}
-local menu_version = 0.5
+local menu_version = 0.6
 local menu_hitchance
 local menu_target
 local menu_output
@@ -337,16 +337,21 @@ end
 if not _G.ShaunPredictionInitialized then
     do
         local function Update()
-            local version = 0.5
+            local version = 0.6
             local file_name = "ShaunPrediction.lua"
             local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/ShaunPrediction.lua"
-            local web_version = http:get("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/ShaunPrediction.lua.version.txt")
-            if tonumber(web_version) == version then
-                console:log("Shaun Prediction Successfully Loaded")
-            else
-                http:download_file(url, file_name)
-                console:log("Shaun Prediction Updated Press F5")
-            end
+            
+            http:get_async("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/ShaunPrediction.lua.version.txt", function(success, web_version)
+				if tonumber(web_version) == version then
+                    console:log("Shaun Prediction Successfully Loaded")
+				else
+					http:download_file_async(url, file_name, function(success)
+						if success then
+                            console:log("Shaun Prediction Updated Press F5")
+						end
+					end)
+				end
+			end)
         end
         Update()
     end
@@ -358,7 +363,7 @@ if not _G.ShaunPredictionInitialized then
     if file_manager:file_exists("Shaun's Sexy Common//Logo.png") then
         pred_category = menu:add_category_sprite("Shaun Prediction", "Shaun's Sexy Common//Logo.png")
     else
-        http:download_file("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Common/Logo.png", "Shaun's Sexy Common//Logo.png")
+        http:download_file_async("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Common/Logo.png", "Shaun's Sexy Common//Logo.png", function() end)
         pred_category = menu:add_category("Shaun Prediction")
     end
 
