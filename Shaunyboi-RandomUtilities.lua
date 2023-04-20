@@ -1,20 +1,27 @@
 local UpdateDraw = false
 do
   	local function AutoUpdate()
-		local Version = 2.6
+		local Version = 2.7
 		local file_name = "Shaunyboi-RandomUtilities.lua"
 		local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-RandomUtilities.lua"
-		local web_version = http:get("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-RandomUtilities.lua.version.txt")
-		console:log("Shaunyboi-RandomUtilities.lua Vers: "..Version)
-		console:log("Shaunyboi-RandomUtilities.Web Vers: "..tonumber(web_version))
-		if tonumber(web_version) == Version then
-			console:log("Shauny's Utilities Successfully Loaded...")
-		else
-			http:download_file(url, file_name)
-			console:log("Shaunyboi-Random Utilities Update Available...")
-			console:log("Please Reload via F5!...")	
-			UpdateDraw = true
-		end	
+		
+		http:get_async("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-RandomUtilities.lua.version.txt", function(success, web_version)
+			console:log("Shaunyboi-RandomUtilities.lua Vers: "..Version)
+			console:log("Shaunyboi-RandomUtilities.Web Vers: "..tonumber(web_version))
+			if tonumber(web_version) == Version then
+				console:log("Shauny's Utilities Successfully Loaded...")
+			else
+				http:download_file_async(url, file_name, function(success)
+					if success then
+						console:log("Shaunyboi-Random Utilities Update Available...")
+						console:log("Please Reload via F5!...")	
+						UpdateDraw = true
+					end
+				end)
+			end	
+
+		end)
+
   	end
 
   AutoUpdate()
@@ -24,50 +31,61 @@ end
 local file_name = "VectorMath.lua"
 if not file_manager:file_exists(file_name) then
    local url = "https://raw.githubusercontent.com/stoneb2/Bruhwalker/main/VectorMath/VectorMath.lua"
-   http:download_file(url, file_name)
+   http:download_file_async(url, file_name, function() 
+   end)
    console:log("VectorMath Library Downloaded")
    console:log("Please Reload with F5")
 end
 
 if not file_manager:file_exists("Shaun's Sexy Common//MaleFirstKillSound.wav") then
-	http:download_file("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Common/MaleFirstKillSound.wav", "Shaun's Sexy Common//MaleFirstKillSound.wav")
+	http:download_file_async("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Common/MaleFirstKillSound.wav", "Shaun's Sexy Common//MaleFirstKillSound.wav", function() 
+	end)
 end
 
 if not file_manager:file_exists("Shaun's Sexy Common//FemaleFirstKillSound.wav") then
-	http:download_file("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Common/FemaleFirstKillSound.wav", "Shaun's Sexy Common//FemaleFirstKillSound.wav")
+	http:download_file_async("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Common/FemaleFirstKillSound.wav", "Shaun's Sexy Common//FemaleFirstKillSound.wav", function() 
+	end)
 end
 
 if not file_manager:file_exists("Shaun's Sexy Common//MaleSecondKillSound.wav") then
-	http:download_file("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Common/MaleSecondKillSound.wav", "Shaun's Sexy Common//MaleSecondKillSound.wav")
+	http:download_file_async("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Common/MaleSecondKillSound.wav", "Shaun's Sexy Common//MaleSecondKillSound.wav", function() 
+	end)
 end
 
 if not file_manager:file_exists("Shaun's Sexy Common//FemaleSecondKillSound.wav") then
-	http:download_file("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Common/FemaleSecondKillSound.wav", "Shaun's Sexy Common//FemaleSecondKillSound.wav")
+	http:download_file_async("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Common/FemaleSecondKillSound.wav", "Shaun's Sexy Common//FemaleSecondKillSound.wav", function() 
+	end)
 end
 
 if not file_manager:file_exists("Shaun's Sexy Common//MaleThirdKillSound.wav") then
-	http:download_file("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Common/MaleThirdKillSound.wav", "Shaun's Sexy Common//MaleThirdKillSound.wav")
+	http:download_file_async("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Common/MaleThirdKillSound.wav", "Shaun's Sexy Common//MaleThirdKillSound.wav", function() 
+	end)
 end
 
 if not file_manager:file_exists("Shaun's Sexy Common//FemaleThirdKillSound.wav") then
-	http:download_file("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Common/FemaleThirdKillSound.wav", "Shaun's Sexy Common//FemaleThirdKillSound.wav")
+	http:download_file_async("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Common/FemaleThirdKillSound.wav", "Shaun's Sexy Common//FemaleThirdKillSound.wav", function() 
+	end)
 end
 
 if not file_manager:file_exists("Shaun's Sexy Common//MaleForthKillSound.wav") then
-	http:download_file("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Common/MaleForthKillSound.wav", "Shaun's Sexy Common//MaleForthKillSound.wav")
+	http:download_file_async("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Common/MaleForthKillSound.wav", "Shaun's Sexy Common//MaleForthKillSound.wav", function() 
+	end)
 end
 
 if not file_manager:file_exists("Shaun's Sexy Common//FemaleForthKillSound.wav") then
-	http:download_file("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Common/FemaleForthKillSound.wav", "Shaun's Sexy Common//FemaleForthKillSound.wav")
+	http:download_file_async("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Common/FemaleForthKillSound.wav", "Shaun's Sexy Common//FemaleForthKillSound.wav", function() 
+	end)
 end
 
 if not file_manager:file_exists("Shaun's Sexy Common//MalePentaKillSound.wav") then
-	http:download_file("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Common/MalePentaKillSound.wav", "Shaun's Sexy Common//MalePentaKillSound.wav")
+	http:download_file_async("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Common/MalePentaKillSound.wav", "Shaun's Sexy Common//MalePentaKillSound.wav", function() 
+	end)
 end
 
 local SoundsDownloaded = false
 if not file_manager:file_exists("Shaun's Sexy Common//FemalePentaKillSound.wav") then
-	http:download_file("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Common/FemalePentaKillSound.wav", "Shaun's Sexy Common//FemalePentaKillSound.wav")
+	http:download_file_async("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Common/FemalePentaKillSound.wav", "Shaun's Sexy Common//FemalePentaKillSound.wav", function() 
+	end)
 	console:log("--- ALL SOUNDS ARE DOWNLOADED PLEASE PRESS F5--- ")
 	console:log("--- LOVE YOU ALL <3 ---")
 	SoundsDownloaded = true
@@ -263,7 +281,8 @@ end
 if file_manager:file_exists("Shaun's Sexy Common//Logo.png") then
 	random_category = menu:add_category_sprite("Shauny's Random Utilities", "Shaun's Sexy Common//Logo.png")
 else
-	http:download_file("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Common/Logo.png", "Shaun's Sexy Common//Logo.png")
+	http:download_file_async("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Common/Logo.png", "Shaun's Sexy Common//Logo.png", function() 
+    end)
 	random_category = menu:add_category("Shauny's Random Utilities")
 end
 
