@@ -13,7 +13,7 @@ function Lucian:new()
 end
 
 function Lucian:init()
-    local LuaVersion = 0.2
+    local LuaVersion = 0.3
 	local LuaName = "ProPlay-Lucian"
 	local lua_file_name = "ProPlay-Lucian.lua"
 	local lua_url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/ProPlay-Lucian.lua"
@@ -42,7 +42,7 @@ function Lucian:init()
     self.qDelay = nil
     self.aaComplete = false
     self.rTarget = nil
-    self.version = 0.2
+    self.version = 0.3
     self:create_menu()
 
     client:set_event_callback("on_tick_always", function() self:on_tick_always() end)
@@ -185,8 +185,9 @@ function Lucian:comboMotherfuckers()
 
     local target = orbwalker:get_orbwalker_target()
     if not target then return end 
+    if self.myHero:has_buff("LucianPassiveBuff") then return end 
 
-    if use_q and self:ready(SLOT_Q) and not self.myHero:has_buff("LucianPassiveBuff") then
+    if use_q and self:ready(SLOT_Q) then
         spellbook:cast_spell_targetted(SLOT_Q, target, self.qDelay)
         self.aaComplete = false
     end
@@ -224,8 +225,9 @@ function Lucian:harassGayboys()
 
     local target = orbwalker:get_orbwalker_target()
     if not target then return end 
+    if self.myHero:has_buff("LucianPassiveBuff") then return end 
 
-    if use_q and self:ready(SLOT_Q) and not self.myHero:has_buff("LucianPassiveBuff") then
+    if use_q and self:ready(SLOT_Q) then
         spellbook:cast_spell_targetted(SLOT_Q, target, self.qDelay)
         self.aaComplete = false
     end
