@@ -13,7 +13,7 @@ function Lucian:new()
 end
 
 function Lucian:init()
-    local LuaVersion = 0.3
+    local LuaVersion = 0.4
 	local LuaName = "ProPlay-Lucian"
 	local lua_file_name = "ProPlay-Lucian.lua"
 	local lua_url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/ProPlay-Lucian.lua"
@@ -42,7 +42,7 @@ function Lucian:init()
     self.qDelay = nil
     self.aaComplete = false
     self.rTarget = nil
-    self.version = 0.3
+    self.version = 0.4
     self:create_menu()
 
     client:set_event_callback("on_tick_always", function() self:on_tick_always() end)
@@ -184,15 +184,15 @@ function Lucian:comboMotherfuckers()
     local e_key = game:is_key_down(menu:get_value(self.e_key))
 
     local target = orbwalker:get_orbwalker_target()
-    if not target then return end 
+    if (not target or not target.is_valid or not target.is_hero) then return end 
     if self.myHero:has_buff("LucianPassiveBuff") then return end 
 
-    if use_q and self:ready(SLOT_Q) then
-        spellbook:cast_spell_targetted(SLOT_Q, target, self.qDelay)
+    local qRange = 500 + target.bounding_radius
+    if use_q and self:ready(SLOT_Q) and target and target:distance_to(self.myHero.origin) <= qRange then
+        spellbook:cast_spell_targetted(SLOT_Q, target, self.qDelay or 0.25)
         self.aaComplete = false
     end
 
-    if not target then return end
     if not self.aaComplete then return end
     if self:ready(SLOT_Q) then return end
     
@@ -207,9 +207,11 @@ function Lucian:comboMotherfuckers()
     if (not use_w or not self:ready(SLOT_W)) then return end
 
     if (not e_mouse and (not self:ready(SLOT_E) or not use_e)) or (e_mouse and not e_key or not self:ready(SLOT_E)) then
-        local p = target.origin
-        spellbook:cast_spell(SLOT_W, 0.25, p.x, p.y, p.z)
-        self.aaComplete = false
+        if target then
+            local p = target.origin
+            spellbook:cast_spell(SLOT_W, 0.25, p.x, p.y, p.z)
+            self.aaComplete = false
+        end
     end
 end
 
@@ -224,15 +226,15 @@ function Lucian:harassGayboys()
     if self.myHero:mana_percentage() < mana then return end
 
     local target = orbwalker:get_orbwalker_target()
-    if not target then return end 
+    if (not target or not target.is_valid or not target.is_hero) then return end 
     if self.myHero:has_buff("LucianPassiveBuff") then return end 
 
-    if use_q and self:ready(SLOT_Q) then
-        spellbook:cast_spell_targetted(SLOT_Q, target, self.qDelay)
+    local qRange = 500 + target.bounding_radius
+    if use_q and self:ready(SLOT_Q) and target and target:distance_to(self.myHero.origin) <= qRange then
+        spellbook:cast_spell_targetted(SLOT_Q, target, self.qDelay or 0.25)
         self.aaComplete = false
     end
-    
-    if not target then return end
+
     if not self.aaComplete then return end
     if self:ready(SLOT_Q) then return end
     
@@ -247,9 +249,11 @@ function Lucian:harassGayboys()
     if (not use_w or not self:ready(SLOT_W)) then return end
 
     if (not e_mouse and (not self:ready(SLOT_E) or not use_e)) or (e_mouse and not e_key or not self:ready(SLOT_E)) then
-        local p = target.origin
-        spellbook:cast_spell(SLOT_W, 0.25, p.x, p.y, p.z)
-        self.aaComplete = false
+        if target then
+            local p = target.origin
+            spellbook:cast_spell(SLOT_W, 0.25, p.x, p.y, p.z)
+            self.aaComplete = false
+        end
     end
 end
 
