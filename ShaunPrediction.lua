@@ -2,7 +2,7 @@ local pred_loaded = package.loaded["ShaunPrediction"]
 if not pred_loaded then return end
 
 local ShaunPrediction = {}
-local menu_version = 0.7
+local menu_version = 0.8
 local menu_hitchance
 local menu_target
 local menu_output
@@ -552,7 +552,7 @@ end
 if not _G.ShaunPredictionInitialized then
     do
         local function Update()
-            local version = 0.7
+            local version = 0.8
             local file_name = "ShaunPrediction.lua"
             local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/ShaunPrediction.lua"
             
@@ -610,10 +610,12 @@ function on_draw()
     if menu:get_value(draw_hitchance) == 1 and menu_target and menu_hitchance then
         local text = game:world_to_screen(menu_target.x, menu_target.y, menu_target.z)
         renderer:draw_text_centered(text.x, text.y + 50, tostring(menu_hitchance))
+        menu_hitchance = nil
     end
 
     if menu:get_value(draw_output) == 1 and menu_output then
         renderer:draw_circle(menu_output.x, menu_output.y, menu_output.z, 30, 255, 255, 255, 255)
+        menu_output = nil
     end
 end
 
