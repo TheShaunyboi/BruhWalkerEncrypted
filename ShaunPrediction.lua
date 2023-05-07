@@ -2,10 +2,12 @@ local pred_loaded = package.loaded["ShaunPrediction"]
 if not pred_loaded then return end
 
 local ShaunPrediction = {}
-local menu_version = 0.6
+local menu_version = 0.7
 local menu_hitchance
 local menu_target
 local menu_output
+
+--------------------------------------------------------------------------------------------------------------------------------
 
 function ShaunPrediction:new(target, ability, source)
     local o = {}
@@ -23,6 +25,12 @@ function ShaunPrediction:GetDistanceSqr2(p1, p2)
     local dx = p1x - p2x
     local dz = (p1z or p1y) - (p2z or p2y)
     return math.sqrt(dx*dx + dz*dz)
+end
+
+function ShaunPrediction:GetDistance(vec1, vec2)
+    local x1, y1, z1 = vec1.x, vec1.y, vec1.z
+    local x2, y2, z2 = vec2.x, vec2.y, vec2.z
+    return math.sqrt((x2 - x1) ^ 2 + (y2 - y1) ^ 2 + (z2 - z1) ^ 2)
 end
 
 --Subtract two vectors
@@ -111,28 +119,78 @@ function ShaunPrediction:GetEnemyMinions(myHeroPos, range)
     return enemyMinions
 end
 
-function ShaunPrediction:getStabilityThreshold()
-    local stabilitySetting = menu:get_value(menu_stabilityThreshold)
-    local fast_count = menu:get_value(menu_fast)
-    local medium_count = menu:get_value(menu_medium)
-    local slow_count = menu:get_value(menu_slow)
-    local stabilityThreshold
-
-    if stabilitySetting == 0 then
-        stabilityThreshold = fast_count
-    elseif stabilitySetting == 1 then
-        stabilityThreshold = medium_count
-    elseif stabilitySetting == 2 then
-        stabilityThreshold = slow_count
-    end
-
-    return stabilityThreshold
+-- Cross product of two vectors
+function ShaunPrediction:Cross(vec1, vec2)
+    local x = vec1.y * vec2.z - vec1.z * vec2.y
+    local y = vec1.z * vec2.x - vec1.x * vec2.z
+    local z = vec1.x * vec2.y - vec1.y * vec2.x
+    return vec3.new(x, y, z)
 end
+
+-- Distance from a point to a line segment
+function ShaunPrediction:DistanceToLine(point, lineStart, lineEnd)
+    local lineDirection = self:Sub(lineEnd, lineStart)
+    local pointDirection = self:Sub(point, lineStart)
+    local projection = self:DotProduct(pointDirection, lineDirection) / self:MagnitudeSquared(lineDirection)
+    local clampedProjection = math.max(0, math.min(projection, 1))
+    local nearestPoint = self:Add(lineStart, self:Mul(lineDirection, clampedProjection))
+    return self:GetDistance(point, nearestPoint)
+end
+
+-- Rotate a 2D vector by an angle (in radians)
+function ShaunPrediction:RotateVector2D(vec, angle)
+    local cosTheta = math.cos(angle)
+    local sinTheta = math.sin(angle)
+    local x = vec.x * cosTheta - vec.y * sinTheta
+    local y = vec.x * sinTheta + vec.y * cosTheta
+    return vec2.new(x, y)
+end
+
+function ShaunPrediction:IsPointInCone(position, predictedPosition, angle, range, position2)
+    local direction = self:Normalize(self:Sub(predictedPosition, position))
+    local perpendicular = vec3.new(-direction.z, 0, direction.x)
+    local half_angle = math.rad(angle / 2)
+    local axis = self:Mul(self:Normalize(self:Cross(direction, perpendicular)), range)
+    local point1 = self:Add(predictedPosition, self:RotateVector2D(self:Mul(perpendicular, range), axis, half_angle))
+    local point2 = self:Add(predictedPosition, self:RotateVector2D(self:Mul(perpendicular, range), axis, -half_angle))
+
+    local distanceToLine = self:DistanceToLine(point1, point2, position2)
+    if distanceToLine <= input.radius then
+        local distanceToCone = self:GetDistanceSqr2(predictedPosition, position2)
+        if distanceToCone <= range * range then
+            local angleBetweenVectors = self:AngleBetweenVectors(direction, self:Sub(position2, predictedPosition))
+            if angleBetweenVectors <= half_angle then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+function ShaunPrediction:IsPointOnLineSegment(p1, p2, p3, radius)
+    local lineVec = self:Sub(p1, p2)
+    local pointVec = self:Sub(p3, p2)
+    local dotProduct = self:DotProduct(pointVec, lineVec) / self:MagnitudeSquared(lineVec)
+    if dotProduct < 0 or dotProduct > 1 then
+        return false
+    end
+    local projVec = self:Mul(lineVec, dotProduct)
+    local distVec = self:Sub(pointVec, projVec)
+    local distanceSqr = self:MagnitudeSquared(distVec)
+    if distanceSqr > radius * radius then
+        return false
+    end
+    return true
+end
+
+--------------------------------------------------------------------------------------------------------------------------------
 
 function ShaunPrediction:calculateDodgeFactor(clickFrequency)
     local maxDodgeFactor = 0.3 -- maximum dodge factor
     return maxDodgeFactor * (1 - math.exp(-clickFrequency))
 end
+
+--------------------------------------------------------------------------------------------------------------------------------
 
 function ShaunPrediction:calculateHitChance(target, ability, source, predictedPosition)
     local targetPos = vec3.new(target.origin.x, target.origin.y, target.origin.z)
@@ -155,9 +213,17 @@ function ShaunPrediction:calculateHitChance(target, ability, source, predictedPo
         hitChance = 0.9 - 0.4 * math.min(self:GetDistanceSqr2(myHeroPos, predictedPosition) / ability.range, 1)
     end
 
+    local moveSpeed = target.move_speed
+    if targetPath.is_dashing or (targetPath.is_moving and moveSpeed > 0) then
+        hitChance = 0.5 * angularHitChance * (moveSpeed / 350 + 0.5)
+    else
+        -- Use a different calculation for stationary targets (e.g a higher base hit chance)
+        hitChance = 0.9 - 0.4 * math.min(self:GetDistanceSqr2(myHeroPos, predictedPosition) / ability.range, 1)
+    end
+
     -- Adjust if target is auto-attacking
     if target.is_auto_attacking then
-        local autoAttackBonus = 0.1 -- adjust value maybe?
+        local autoAttackBonus = 0.2 -- adjust value maybe?
         hitChance = hitChance + autoAttackBonus
     end
 
@@ -174,30 +240,25 @@ function ShaunPrediction:calculateHitChance(target, ability, source, predictedPo
         end
     end
 
+    if next(ability.collision) ~= nil then
+        local collisionPredPos = _G.Prediction:get_collision(ability, predictedPosition, target)
+        local collisionEnemy = _G.Prediction:get_collision(ability, targetPos, target)
+        if next(collisionPredPos) ~= nil or next(collisionEnemy) ~= nil then
+            return nil
+        end
+    end
+    
     -- Adjust hit chance based on target's bounding radius, ability's width, radius, or angle
     local distanceDifference = math.abs(self:GetDistanceSqr2(myHeroPos, predictedPosition) - self:GetDistanceSqr2(myHeroPos, targetPos))
     local totalRadius
-    if ability.type == "linear" then
-        if next(ability.collision) ~= nil then
-            local c = _G.Prediction:get_collision(ability, predictedPosition, target)
-            if next(c) ~= nil then
-                return nil
-            end
-        end
-        totalRadius = target.bounding_radius + ability.radius
 
-    elseif ability.type == "circular" then
+    if ability.type == "linear" or ability.type == "circular" then
         totalRadius = target.bounding_radius + ability.radius
 
     elseif ability.type == "cone" then
-        if next(ability.collision) ~= nil then
-            local c = _G.Prediction:get_collision(ability, predictedPosition, target)
-            if next(c) ~= nil then
-                return nil
-            end
-        end
         totalRadius = target.bounding_radius + math.tan(math.rad(ability.angle / 2)) * distanceToTarget
     end
+    
     if distanceDifference <= totalRadius then
         hitChance = hitChance * 1.25
     end
@@ -205,6 +266,90 @@ function ShaunPrediction:calculateHitChance(target, ability, source, predictedPo
     return hitChance
 end
 
+function ShaunPrediction:calculateHitChance_BETA(target, ability, source, predictedPosition)
+    local targetPos = vec3.new(target.origin.x, target.origin.y, target.origin.z)
+    local myHeroPos = vec3.new(source.origin.x, source.origin.y, source.origin.y)
+    
+    -- Calculate hit chance
+    local distanceToTarget = source:distance_to(targetPos)
+    local timeToHit = distanceToTarget / ability.speed
+    local baseHitChance = math.max(0, 1 - timeToHit)
+
+    -- Adjust for movement speed
+    local targetMovementSpeed = target.move_speed or 325 -- default movement speed to 325
+    local speedFactor = math.max(1 - targetMovementSpeed / 900, 0.5) -- decrease hit chance based on target's movement speed
+    baseHitChance = baseHitChance * speedFactor
+
+    -- Adjust for CC
+    local isCCed = target:get_immobile_duration(true)
+    if isCCed then
+        local ccBonus = 0.25 -- increase hit chance if target is CCed
+        baseHitChance = baseHitChance + ccBonus
+    end
+
+    -- Adjust hit chance based on whether the target is auto-attacking
+    if target.is_auto_attacking then
+        local autoAttackBonus = 0.1 -- adjust value as needed
+        baseHitChance = baseHitChance + autoAttackBonus
+    end
+
+    if next(ability.collision) ~= nil then
+        local collisionPredPos = _G.Prediction:get_collision(ability, predictedPosition, target)
+        local collisionEnemy = _G.Prediction:get_collision(ability, targetPos, target)
+        if next(collisionPredPos) ~= nil or next(collisionEnemy) ~= nil then
+            return nil
+        end
+    end
+
+    -- Adjust hit chance based on collision and bounding radius
+    local totalRadius
+    if ability.type == "circular" or ability.type == "linear" then
+        totalRadius = target.bounding_radius + ability.radius
+
+    elseif ability.type == "cone" then
+        totalRadius = target.bounding_radius + math.tan(math.rad(ability.angle / 2)) * distanceToTarget
+    end
+
+    -- Decrease hit chance if target is near enemy minions
+    local enemyMinions = self:GetEnemyMinions(targetPos, ability.range)
+    for _, minion in ipairs(enemyMinions) do
+        if minion then
+            local distanceToMinion = minion:distance_to(targetPos)
+            if distanceToMinion < totalRadius then
+                baseHitChance = baseHitChance * 0.5
+                break
+            end
+        end
+    end
+
+
+    local distanceDifference = math.abs(self:GetDistanceSqr2(myHeroPos, predictedPosition) - self:GetDistanceSqr2(myHeroPos, targetPos))
+    if distanceDifference <= totalRadius * totalRadius then
+        baseHitChance = baseHitChance * 1.1
+    end
+
+    return baseHitChance
+end
+
+--------------------------------------------------------------------------------------------------------------------------------
+
+function ShaunPrediction:getStabilityThreshold()
+    local stabilitySetting = menu:get_value(menu_stabilityThreshold)
+    local fast_count = menu:get_value(menu_fast)
+    local medium_count = menu:get_value(menu_medium)
+    local slow_count = menu:get_value(menu_slow)
+    local stabilityThreshold
+
+    if stabilitySetting == 0 then
+        stabilityThreshold = fast_count
+    elseif stabilitySetting == 1 then
+        stabilityThreshold = medium_count
+    elseif stabilitySetting == 2 then
+        stabilityThreshold = slow_count
+    end
+
+    return stabilityThreshold
+end
 
 function ShaunPrediction:stabilizeCalculation(target, ability, source, stabilityThreshold, predictedPosition)
     local prevHitChance = 0
@@ -238,6 +383,8 @@ function ShaunPrediction:stabilizeCalculation(target, ability, source, stability
 
     return false
 end
+
+--------------------------------------------------------------------------------------------------------------------------------
 
 function ShaunPrediction:calculatePredictedPosition(target, ability, source)
     local targetPos = vec3.new(target.origin.x, target.origin.y, target.origin.z)
@@ -275,16 +422,12 @@ function ShaunPrediction:calculatePredictedPosition(target, ability, source)
                 remainingTravelTime = remainingTravelTime - timeToReachNextWaypoint
                 predictedPosition = nextWaypoint
             else
-                -- Target is dashing, use the dash position as the predicted position
-                if targetPath.is_dashing then
-                    predictedPosition = vec3.new(targetPath.dash_pos.x, targetPath.dash_pos.y, targetPath.dash_pos.z)
-                else
-                    if nextWaypoint and currentWaypoint then
-                        local directionToNextWaypoint = self:Sub(nextWaypoint, currentWaypoint)
-                        local moveSpeed = target.move_speed
-                        local directionToNextWaypointNormalized = self:Normalize(directionToNextWaypoint)
-                        predictedPosition = self:Add(currentWaypoint, self:Mul(directionToNextWaypointNormalized, remainingTravelTime * moveSpeed))
-                    end
+               
+                if nextWaypoint and currentWaypoint then
+                    local directionToNextWaypoint = self:Sub(nextWaypoint, currentWaypoint)
+                    local moveSpeed = target.move_speed
+                    local directionToNextWaypointNormalized = self:Normalize(directionToNextWaypoint)
+                    predictedPosition = self:Add(currentWaypoint, self:Mul(directionToNextWaypointNormalized, remainingTravelTime * moveSpeed))
                 end
                 break
             end
@@ -307,6 +450,68 @@ function ShaunPrediction:calculatePredictedPosition(target, ability, source)
     return predictedPosition
 end
 
+--------------------------------------------------------------------------------------------------------------------------------
+
+function ShaunPrediction:GetBestAOE(input, units, star)
+    if not input or not units or #units == 0 then
+        return nil
+    end
+    
+    local bestPosition = nil
+    local highestHitCount = 0
+    
+    for i, unit in ipairs(units) do
+        local position = vec3.new(unit.origin.x, unit.origin.y, unit.origin.z)
+        local hitCount = 0
+
+        if star then
+            local distanceToStar = self:GetDistanceSqr2(position, vec3.new(star.origin.x, star.origin.y, star.origin.z))
+            if distanceToStar <= input.range * input.range then
+                hitCount = hitCount + 1
+            end
+        end
+
+        if input.type == "linear" then
+            local predictedPosition = self:calculatePredictedPosition(unit, input, star or unit)
+            for j, unit2 in ipairs(units) do
+                local position2 = vec3.new(unit2.origin.x, unit2.origin.y, unit2.origin.z)
+                if self:IsPointOnLineSegment(position, predictedPosition, position2, input.radius) then
+                    hitCount = hitCount + 1
+                end
+            end
+
+        elseif input.type == "circular" then
+            for j, unit2 in ipairs(units) do
+                local position2 = vec3.new(unit2.origin.x, unit2.origin.y, unit2.origin.z)
+                local distanceToUnit = self:GetDistanceSqr2(position, position2)
+                if distanceToUnit <= input.radius * input.radius then
+                    hitCount = hitCount + 1
+                end
+            end
+
+        elseif input.type == "cone" then
+            local predictedPosition = self:calculatePredictedPosition(unit, input, star or unit)
+            for j, unit2 in ipairs(units) do
+                local position2 = vec3.new(unit2.origin.x, unit2.origin.y, unit2.origin.z)
+                if self:IsPointInCone(position, predictedPosition, input.angle, input.range, position2) then
+                    hitCount = hitCount + 1
+                end
+            end
+        end
+ 
+        if hitCount > highestHitCount then
+            bestPosition = position
+            highestHitCount = hitCount
+        end
+    end
+
+    return {position = bestPosition, 
+        hit_count = highestHitCount
+    }
+end
+
+--------------------------------------------------------------------------------------------------------------------------------
+
 function ShaunPrediction:calculatePrediction(target, ability, source)
     local predictedPosition = self:calculatePredictedPosition(target, ability, source)
     if not predictedPosition then
@@ -314,15 +519,23 @@ function ShaunPrediction:calculatePrediction(target, ability, source)
     end
     menu_output = predictedPosition
 
+    local stabilityThreshold
     local useStabilityThreshold = menu:get_value(menu_enableStability) == 1
     if useStabilityThreshold then
-        local stabilityThreshold = self:getStabilityThreshold()
+        stabilityThreshold = self:getStabilityThreshold()
         if not self:stabilizeCalculation(target, ability, source, stabilityThreshold, predictedPosition) then
             return nil
         end
     end
 
-    local hitChance = self:calculateHitChance(target, ability, source, predictedPosition)
+    local hitChance
+    local useBetaHitChance = menu:get_value(menu_hitchance_BETA) == 1
+    if useBetaHitChance then
+        hitChance = self:calculateHitChance_BETA(target, ability, source, predictedPosition)
+    else
+        hitChance = self:calculateHitChance(target, ability, source, predictedPosition)
+    end
+
     if hitChance == nil then
         return nil
     end
@@ -334,10 +547,12 @@ function ShaunPrediction:calculatePrediction(target, ability, source)
     }
 end
 
+--------------------------------------------------------------------------------------------------------------------------------
+
 if not _G.ShaunPredictionInitialized then
     do
         local function Update()
-            local version = 0.6
+            local version = 0.7
             local file_name = "ShaunPrediction.lua"
             local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/ShaunPrediction.lua"
             
@@ -371,8 +586,9 @@ if not _G.ShaunPredictionInitialized then
         menu:add_label("Reaction Time - Dodge Factor", reaction_time)
         menu_reactionTime = menu:add_checkbox("Use Dodge Factor", reaction_time, 1)
     --
-    hitchance_stability = menu:add_subcategory("Hit Chance Stability [BETA]", pred_category)
-        menu_enableStability = menu:add_checkbox("Use Hit Chance Stability", hitchance_stability, 0)
+    hitchance_stability = menu:add_subcategory("Hit Chance Settings", pred_category)
+        menu_hitchance_BETA = menu:add_checkbox("Use New Hit Chance Formula [BETA]", hitchance_stability, 1)
+        menu_enableStability = menu:add_checkbox("Use Hit Chance Stability [BETA]", hitchance_stability, 0)
         menu:add_label("How Many Counts We Consider Within Stability Calculation", hitchance_stability)
         a_table = {}
         a_table[1] = "Fast"
@@ -405,7 +621,7 @@ averageClickSpeed = {}
 local clickTimestamps = {}
 local clickSpeedSamples = 10
 
-local function on_new_path(obj, path)
+function on_new_path(obj, path)
     if obj.is_enemy and obj.is_hero then
         local targetId = obj.object_id
 
@@ -432,7 +648,6 @@ local function on_new_path(obj, path)
         end
     end
 end
-
 
 client:set_event_callback("on_new_path", on_new_path)
 client:set_event_callback("on_draw", on_draw)
