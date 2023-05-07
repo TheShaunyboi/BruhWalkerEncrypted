@@ -1,6 +1,6 @@
 do
     local function AutoUpdate()
-		local version = 0.4
+		local version = 0.5
 		local file_name = "Shauns-ChampionAIO.lua"
 		local aio_url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shauns-ChampionAIO.lua"
         http:get_async("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shauns-ChampionAIO.lua.version.txt", function(success, web_version)
@@ -14,6 +14,9 @@ do
     end
     AutoUpdate()
 end
+
+require("Prediction")
+require("PKDamageLib")
 
 -- Create DIR folder if not found
 if not file_manager:directory_exists("Shaun's Sexy Common") then
@@ -80,12 +83,12 @@ elseif champ_name == "Ashe" then
 		load_and_run_file(lua_name)
 	end
 elseif champ_name == "Lucian" then
-	local lua_name = "BLMLucian.lua"
+	local lua_name = "ProPlay-Lucian.lua"
 	if not file_manager:file_exists(lua_name) then
 		load_and_run_file(lua_name)
 	end
 elseif champ_name == "Syndra" then
-	local lua_name = "BlueBallsSyndra.lua"
+	local lua_name = "ProPlay-Syndra.lua"
 	if not file_manager:file_exists(lua_name) then
 		load_and_run_file(lua_name)
 	end
