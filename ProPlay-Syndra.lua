@@ -104,6 +104,7 @@ function Syndra:create_menu()
     self.block_r = menu:add_keybinder("Block [R] KS Usage Key", self.Syndra_category, 0x01)
 
     self.Syndra_pred = menu:add_subcategory("Prediction", self.Syndra_category)
+        menu:add_label("Shaun Prediction", self.Syndra_pred)
         self.q_hitchance = menu:add_slider("[Q] Hit Chance", self.Syndra_pred, 1, 100, 45)
         self.w_hitchance = menu:add_slider("[W] Hit Chance", self.Syndra_pred, 1, 100, 45)
 
@@ -132,7 +133,7 @@ function Syndra:create_menu()
 
     self.Syndra_draw = menu:add_subcategory("Draw Features", self.Syndra_category)
         self.q_draw = menu:add_checkbox("Draw [Q] Range",  self.Syndra_draw, 1)
-        self.w_draw = menu:add_checkbox("Draw [W] Range",  self.Syndra_draw, 1)
+        self.w_draw = menu:add_checkbox("Draw [W] Range",  self.Syndra_draw, 0)
         self.stun_draw = menu:add_checkbox("Draw Max [Stun] Range",  self.Syndra_draw, 1)
         self.grab_draw = menu:add_checkbox("Draw Circles On Grabbable Units", self.Syndra_draw, 1)
         self.ball_line_draw = menu:add_checkbox("Draw Line Between [Ball] & [Syndra]", self.Syndra_draw, 1)
@@ -366,7 +367,7 @@ function Syndra:comboMotherfuckers()
         end
     end
 
-    if self:holdingObject() and target:distance_to(self.myHero.origin) <= self.W.range and pred and pred.hitChance >= w_hc and not self.ball_moving then
+    if use_w and self:holdingObject() and target:distance_to(self.myHero.origin) <= self.W.range and pred and pred.hitChance >= w_hc and not self.ball_moving then
         local p = pred.castPos
         spellbook:cast_spell(SLOT_W, 0.5, p.x, p.y, p.z)
         return
@@ -434,7 +435,7 @@ function Syndra:harassGayboys()
         end
     end
 
-    if self:holdingObject() and target:distance_to(self.myHero.origin) <= self.W.range and pred and pred.hitChance >= w_hc and not self.ball_moving then
+    if use_w and self:holdingObject() and target:distance_to(self.myHero.origin) <= self.W.range and pred and pred.hitChance >= w_hc and not self.ball_moving then
         local p = pred.castPos
         spellbook:cast_spell(SLOT_W, 0.5, p.x, p.y, p.z)
         return
@@ -472,20 +473,18 @@ end
 
 function Syndra:autoStun()
     if menu:get_value(self.auto_stun) == 0 then return end 
-    if (not self:ready(SLOT_R) or not self:ready(SLOT_E)) then return end 
+    if (not self:ready(SLOT_Q) or not self:ready(SLOT_E)) then return end 
     local countReq = menu:get_value(self.auto_stun_number)
 
-    if self:ready(SLOT_Q) and self:ready(SLOT_E) then
-        for _, e_target in ipairs(self:enemyHeroes()) do
-            local pred = self.ShaunPred:calculatePrediction(e_target, self.Q_input, self.myHero)
-            if pred then
-                local pos = pred.castPos
-                local count = self:GetLineTargetCount(self.myHero, e_target.origin, 55)
-                if count and count >= countReq then
-                    spellbook:cast_spell(SLOT_Q, 0.25, pos.x, pos.y, pos.z)
-                    spellbook:cast_spell(SLOT_E, 0.25, pos.x, pos.y, pos.z)
-                    return
-                end
+    for _, e_target in ipairs(self:enemyHeroes()) do
+        local pred = self.ShaunPred:calculatePrediction(e_target, self.Q_input, self.myHero)
+        if pred then
+            local pos = pred.castPos
+            local count = self:GetLineTargetCount(self.myHero, e_target.origin, 55)
+            if count and count >= countReq then
+                spellbook:cast_spell(SLOT_Q, 0.25, pos.x, pos.y, pos.z)
+                spellbook:cast_spell(SLOT_E, 0.25, pos.x, pos.y, pos.z)
+                return
             end
         end
     end
