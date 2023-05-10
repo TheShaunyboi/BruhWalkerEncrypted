@@ -13,7 +13,7 @@ function Syndra:new()
 end
 
 function Syndra:init()
-    local LuaVersion = 0.3
+    local LuaVersion = 0.4
 	local LuaName = "ProPlay-Syndra"
 	local lua_file_name = "ProPlay-Syndra.lua"
 	local lua_url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/ProPlay-Syndra.lua"
@@ -74,7 +74,7 @@ function Syndra:init()
     self.ballHolder = {}
     self.ballTimer = {}
     self.bounding_radiuses = {}
-    self.version = 0.3
+    self.version = 0.4
     self:create_menu()
 
     client:set_event_callback("on_tick_always", function() self:on_tick_always() end)
@@ -319,7 +319,7 @@ function Syndra:totaliseDmg(target)
     local w = 0
     local e = 0
 
-    if self:ready(SLOT_Q) then
+    if self:qReady() then
         local qDmg = getdmg("Q", target, self.myHero, 1)
         q = qDmg
     end
