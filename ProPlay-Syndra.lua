@@ -599,7 +599,7 @@ function Syndra:on_draw()
         end
     end
 
-    if draw_q and self:ready(SLOT_Q) then
+    if draw_q and self:qReady() then
         renderer:draw_circle(heroPos.x, heroPos.y, heroPos.z, self.Q.range, 255, 255, 0, 255)
     end
 
