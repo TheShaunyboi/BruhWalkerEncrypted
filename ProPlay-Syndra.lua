@@ -13,7 +13,7 @@ function Syndra:new()
 end
 
 function Syndra:init()
-    local LuaVersion = 0.1
+    local LuaVersion = 0.2
 	local LuaName = "ProPlay-Syndra"
 	local lua_file_name = "ProPlay-Syndra.lua"
 	local lua_url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/ProPlay-Syndra.lua"
@@ -235,7 +235,7 @@ function Syndra:size()
 end
 
 function Syndra:holdingObject()
-    return myHero:has_buff("syndrawtooltip")
+    return self.myHero:has_buff("syndrawtooltip")
 end
 
 function Syndra:mergeAllTables(ballHolder, minions, jungle_minions, pets)
