@@ -13,7 +13,7 @@ function Syndra:new()
 end
 
 function Syndra:init()
-    local LuaVersion = 0.2
+    local LuaVersion = 0.3
 	local LuaName = "ProPlay-Syndra"
 	local lua_file_name = "ProPlay-Syndra.lua"
 	local lua_url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/ProPlay-Syndra.lua"
@@ -70,15 +70,17 @@ function Syndra:init()
     self.ShaunPred = require "ShaunPrediction"
     self.myHero = game.local_player
     self.ball_moving = false
+    self.wPickupTime = 0
     self.ballHolder = {}
     self.ballTimer = {}
     self.bounding_radiuses = {}
-    self.version = 0.1
+    self.version = 0.3
     self:create_menu()
 
     client:set_event_callback("on_tick_always", function() self:on_tick_always() end)
     client:set_event_callback("on_draw", function() self:on_draw() end)
     client:set_event_callback("on_object_created", function(obj, obj_name) self:on_object_created(obj, obj_name) end)
+    require("PKDamageLib")
 end
 
 function Syndra:create_menu()
@@ -124,6 +126,7 @@ function Syndra:create_menu()
 
     self.Syndra_r = menu:add_subcategory("[R] Kill Steal", self.Syndra_category)
         self.kill_r = menu:add_checkbox("Use [R]",  self.Syndra_r, 1)
+        self.overkill_check = menu:add_checkbox("Q/W/E Total & Spell Ready Damage Overkill Check",  self.Syndra_r, 1)
     --
 
     self.Syndra_stun = menu:add_subcategory("Auto Stun Features", self.Syndra_category)
@@ -288,8 +291,10 @@ function Syndra:passiveCount()
 end
 
 function Syndra:RDmg(unit)
+    local dmg = 0
     local level = spellbook:get_spell_slot(SLOT_R).level
     local ballCount = self:size() + 3
+
     -- Adds 3 balls, grabs up to 4
     ballCount = ballCount <= 7 and ballCount or 7
 
@@ -309,6 +314,34 @@ function Syndra:RDmg(unit)
     return dmg
 end
 
+function Syndra:totaliseDmg(target)
+    local q = 0
+    local w = 0
+    local e = 0
+
+    if self:ready(SLOT_Q) then
+        local qDmg = getdmg("Q", target, self.myHero, 1)
+        q = qDmg
+    end
+
+    if self:ready(SLOT_W) then
+        local wDmg = getdmg("W", target, self.myHero, 1)
+        w = wDmg
+    end
+
+    if self:ready(SLOT_E) then
+        local eDmg = getdmg("E", target, self.myHero, 1)
+        e = eDmg
+    end
+
+    local d = q + w + e
+    if d > target.health then
+        return true, d 
+    end
+
+    return false, d
+end
+
 function Syndra:comboMotherfuckers()
     local use_q = menu:get_value(self.combo_q) == 1
     local use_w = menu:get_value(self.combo_w) == 1
@@ -325,10 +358,6 @@ function Syndra:comboMotherfuckers()
     elseif self:qReady() and not self:ready(SLOT_E) then
         target = selector:find_target(self.Q.range, mode_health)
         pred = self.ShaunPred:calculatePrediction(target, self.QOnly_input, self.myHero)
-
-    elseif not self:qReady() and not self:ready(SLOT_E) then
-        target = selector:find_target(self.W.range, mode_health)
-        pred = self.ShaunPred:calculatePrediction(target, self.W_input, self.myHero)
     end
 
     if use_q and self:qReady() and (not self:ready(SLOT_E) or not use_e) and target:distance_to(self.myHero.origin) <= self.Q.range then
@@ -361,16 +390,23 @@ function Syndra:comboMotherfuckers()
                 if not self:qReady() and not self:ready(SLOT_E) and grabObject:distance_to(self.myHero.origin) <= self.W.range then
                     local p = grabObject.origin
                     spellbook:cast_spell(SLOT_W, 0.5, p.x, p.y, p.z)
+                    self.wPickupTime = game.game_time + 0.5
                     return
                 end
             end
         end
     end
 
-    if use_w and self:holdingObject() and target:distance_to(self.myHero.origin) <= self.W.range and pred and pred.hitChance >= w_hc and not self.ball_moving then
-        local p = pred.castPos
-        spellbook:cast_spell(SLOT_W, 0.5, p.x, p.y, p.z)
-        return
+    if use_w and self:holdingObject() and target:distance_to(self.myHero.origin) <= self.W.range and not self.ball_moving then
+        if self.wPickupTime < game.game_time then
+
+            local throwPred = self.ShaunPred:calculatePrediction(target, self.W_input, self.myHero)
+            if throwPred and throwPred.hitChance >= w_hc then
+                local p = throwPred.castPos
+                spellbook:cast_spell(SLOT_W, 0.5, p.x, p.y, p.z)
+                return
+            end
+        end
     end  
 end
 
@@ -393,10 +429,6 @@ function Syndra:harassGayboys()
     elseif self:qReady() and not self:ready(SLOT_E) then
         target = selector:find_target(self.Q.range, mode_health)
         pred = self.ShaunPred:calculatePrediction(target, self.QOnly_input, self.myHero)
-
-    elseif not self:qReady() and not self:ready(SLOT_E) then
-        target = selector:find_target(self.W.range, mode_health)
-        pred = self.ShaunPred:calculatePrediction(target, self.W_input, self.myHero)
     end
 
     if use_q and self:qReady() and (not self:ready(SLOT_E) or not use_e) and target:distance_to(self.myHero.origin) <= self.Q.range then
@@ -429,29 +461,41 @@ function Syndra:harassGayboys()
                 if not self:qReady() and not self:ready(SLOT_E) and grabObject:distance_to(self.myHero.origin) <= self.W.range then
                     local p = grabObject.origin
                     spellbook:cast_spell(SLOT_W, 0.5, p.x, p.y, p.z)
+                    self.wPickupTime = game.game_time + 0.5
                     return
                 end
             end
         end
     end
 
-    if use_w and self:holdingObject() and target:distance_to(self.myHero.origin) <= self.W.range and pred and pred.hitChance >= w_hc and not self.ball_moving then
-        local p = pred.castPos
-        spellbook:cast_spell(SLOT_W, 0.5, p.x, p.y, p.z)
-        return
-    end  
+    if use_w and self:holdingObject() and target:distance_to(self.myHero.origin) <= self.W.range and not self.ball_moving then
+        if self.wPickupTime < game.game_time then
+
+            local throwPred = self.ShaunPred:calculatePrediction(target, self.W_input, self.myHero)
+            if throwPred and throwPred.hitChance >= w_hc then
+                local p = throwPred.castPos
+                spellbook:cast_spell(SLOT_W, 0.5, p.x, p.y, p.z)
+                return
+            end
+        end
+    end 
 end
 
 function Syndra:bigBalls()
     if menu:get_value(self.kill_r) == 0 then return end 
     if not self:ready(SLOT_R) then return end 
     if game:is_key_down(menu:get_value(self.block_r)) then return end 
+    local overKillCheck = menu:get_value(self.overkill_check) == 1
 
     for _, target in ipairs(self:enemyHeroes()) do
-        local range = self.R.range + target.bounding_radius
+        local range = self.R.range
         if self:validTarget(target, range) and self:RDmg(target) >= target.health then
-            spellbook:cast_spell_targetted(SLOT_R, target, 0.25)
-            return
+
+            local protected, damage = self:totaliseDmg(target)
+            if (overKillCheck and not protected) or (not overKillCheck) then
+                spellbook:cast_spell_targetted(SLOT_R, target, 0.25)
+                return
+            end
         end
     end
 end
@@ -489,6 +533,18 @@ function Syndra:autoStun()
         end
     end
 end
+
+function Syndra:manualR()
+    if not game:is_key_down(menu:get_value(self.r_key)) then return end 
+    if not self:ready(SLOT_R) then return end 
+    local range = self.R.range
+    local target = selector:find_target(range, mode_cursor)
+
+    if self:validTarget(target, range) then
+        spellbook:cast_spell_targetted(SLOT_R, target, 0.25)
+        return
+    end
+end
     
 
 function Syndra:on_tick_always()
@@ -503,6 +559,7 @@ function Syndra:on_tick_always()
     self:bigBalls()
     self:stunMotherfuckers()
     self:autoStun()
+    self:manualR()
 
     for index, ball in pairs(self.ballHolder) do
 		if not ball.is_alive then
@@ -554,12 +611,25 @@ function Syndra:on_draw()
         renderer:draw_circle(heroPos.x, heroPos.y, heroPos.z, self.Q_input.range, 0, 255, 0, 255)
     end
 
-    if self:ready(SLOT_R) then
-        for _, target in ipairs(self:enemyHeroes()) do
-            local range = 2000
-            local dmg = self:RDmg(target)
-            if dmg and target:distance_to(self.myHero.origin) <= range then
-                target:draw_damage_health_bar(dmg)
+    local overKillCheck = menu:get_value(self.overkill_check) == 1
+    for _, target in ipairs(self:enemyHeroes()) do
+        if target:distance_to(self.myHero.origin) <= 2000 then
+            local enemyPos = target.origin
+            local text = game:world_to_screen_2(enemyPos.x, enemyPos.y, enemyPos.z)
+            local protected, damage = self:totaliseDmg(target)
+
+            if self:ready(SLOT_R) then
+                local rDmg = self:RDmg(target)
+                target:draw_damage_health_bar(rDmg)
+
+                if overKillCheck and protected then
+                    renderer:draw_text_big_centered(text.x, text.y + 50, "[R] Overkill Protected")
+                end
+            end
+
+            local totaliseDmg = damage
+            if totaliseDmg > target.health and (not protected or not overKillCheck) then
+                renderer:draw_text_big_centered(text.x, text.y + 50, "Ready Spell Rotation Can Kill")
             end
         end
     end
