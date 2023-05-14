@@ -1,7 +1,7 @@
 local UpdateDraw = false
 do
   	local function AutoUpdate()
-		local Version = 2.7
+		local Version = 2.8
 		local file_name = "Shaunyboi-RandomUtilities.lua"
 		local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-RandomUtilities.lua"
 		
@@ -859,8 +859,25 @@ local function on_draw()
 	end
 end
 
-local function on_tick()
+local dragType
+local dSoul = false
+if game.selected_terrain_id then
+    if game.selected_terrain_id == 1 then
+        dragType = "Internal Soul"
+    elseif game.selected_terrain_id == 2 then
+        dragType = "Mountain Soul"
+    elseif game.selected_terrain_id == 3 then
+        dragType = "Ocean Soul"
+    elseif game.selected_terrain_id == 4 then
+        dragType = "Cloud Soul"
+    elseif game.selected_terrain_id == 5 then
+        dragType = "Hextech Soul"
+    elseif game.selected_terrain_id == 6 then
+        dragType = "Chemtech Soul"
+    end 
+end
 
+local function on_tick()
 	if menu:get_value(random_enabled) == 1 then 
 		CastWard_Pos()
 		Ward_Ping_Close()
@@ -868,6 +885,12 @@ local function on_tick()
 		AutoBuyWard()
 		Check_Shop()
 		SemiManualExhaust()
+
+        if not dSoul and dragType then
+            game:print_chat("<font color=\"#11ff00\"><b>Shaunyboi Message.. Finding Rift Selected Dragon Soul</b></font><font")
+            game:print_chat(dragType)
+            dSoul = true
+        end
 
 		if menu:get_value(sounds_selector_use) == 1 then
 			
