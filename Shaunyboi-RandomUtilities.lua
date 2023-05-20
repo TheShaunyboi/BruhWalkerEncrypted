@@ -1,7 +1,7 @@
 local UpdateDraw = false
 do
   	local function AutoUpdate()
-		local Version = 2.8
+		local Version = 2.9
 		local file_name = "Shaunyboi-RandomUtilities.lua"
 		local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-RandomUtilities.lua"
 		
@@ -700,8 +700,8 @@ local function ThreshWarding()
 	if game:is_key_down(menu:get_value(thresh_lantern_key)) then
 		allypets = game.pets
 		for _, allyminion in ipairs(allypets) do
-			if not allyminion.is_enemy and allyminion:distance_to(myHero.origin) <= 250 and allyminion.object_name == "ThreshLantern" and allyminion.is_visible and allyminion.is_alive then
-				spellbook:cast_spell_targetted(62, allyminion, 0.25)
+			if not allyminion.is_enemy and allyminion:distance_to(myHero.origin) <= 250 and allyminion.object_name == "ThreshLantern" and allyminion.is_visible then
+				game:use_object(allyminion)
 			end
 		end	
 	end	
