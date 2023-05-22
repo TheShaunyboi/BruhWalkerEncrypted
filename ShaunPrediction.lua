@@ -2,7 +2,7 @@ local pred_loaded = package.loaded["ShaunPrediction"]
 if not pred_loaded then return end
 
 local ShaunPrediction = {}
-local menu_version = 0.8
+local menu_version = 0.9
 local menu_hitchance
 local menu_target
 local menu_output
@@ -213,7 +213,7 @@ function ShaunPrediction:calculateHitChance(target, ability, source, predictedPo
         hitChance = 0.9 - 0.4 * math.min(self:GetDistanceSqr2(myHeroPos, predictedPosition) / ability.range, 1)
     end
 
-    local moveSpeed = target.move_speed
+    local moveSpeed = targetPath.velocity.length
     if targetPath.is_dashing or (targetPath.is_moving and moveSpeed > 0) then
         hitChance = 0.5 * angularHitChance * (moveSpeed / 350 + 0.5)
     else
@@ -276,7 +276,8 @@ function ShaunPrediction:calculateHitChance_BETA(target, ability, source, predic
     local baseHitChance = math.max(0, 1 - timeToHit)
 
     -- Adjust for movement speed
-    local targetMovementSpeed = target.move_speed or 325 -- default movement speed to 325
+    local targetPath = target.path
+    local targetMovementSpeed = targetPath.velocity.length
     local speedFactor = math.max(1 - targetMovementSpeed / 900, 0.5) -- decrease hit chance based on target's movement speed
     baseHitChance = baseHitChance * speedFactor
 
@@ -415,7 +416,7 @@ function ShaunPrediction:calculatePredictedPosition(target, ability, source)
             if targetPath.is_dashing then
                 timeToReachNextWaypoint = waypointDistance / targetPath.dash_speed
             else
-                timeToReachNextWaypoint = waypointDistance / target.move_speed
+                timeToReachNextWaypoint = waypointDistance / targetPath.velocity.length
             end
 
             if remainingTravelTime > timeToReachNextWaypoint then
@@ -425,7 +426,7 @@ function ShaunPrediction:calculatePredictedPosition(target, ability, source)
                
                 if nextWaypoint and currentWaypoint then
                     local directionToNextWaypoint = self:Sub(nextWaypoint, currentWaypoint)
-                    local moveSpeed = target.move_speed
+                    local moveSpeed = targetPath.velocity.length
                     local directionToNextWaypointNormalized = self:Normalize(directionToNextWaypoint)
                     predictedPosition = self:Add(currentWaypoint, self:Mul(directionToNextWaypointNormalized, remainingTravelTime * moveSpeed))
                 end
@@ -439,7 +440,7 @@ function ShaunPrediction:calculatePredictedPosition(target, ability, source)
             local currentWaypoint = vec3.new(targetPath.waypoints[1].x, targetPath.waypoints[1].y, targetPath.waypoints[1].z)
             local nextWaypoint = vec3.new(targetPath.waypoints[2].x, targetPath.waypoints[2].y, targetPath.waypoints[2].z)
             local directionToNextWaypoint = self:Sub(nextWaypoint, currentWaypoint)
-            local moveSpeed = targetPath.is_dashing and targetPath.dash_speed or target.move_speed
+            local moveSpeed = targetPath.is_dashing and targetPath.dash_speed or targetPath.velocity.length
             local directionToNextWaypointNormalized = self:Normalize(directionToNextWaypoint)
             local distanceToMove = self:Mul(directionToNextWaypointNormalized, remainingTravelTime * moveSpeed)
             predictedPosition = self:Add(targetPos, distanceToMove)
@@ -552,7 +553,7 @@ end
 if not _G.ShaunPredictionInitialized then
     do
         local function Update()
-            local version = 0.8
+            local version = 0.9
             local file_name = "ShaunPrediction.lua"
             local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/ShaunPrediction.lua"
             
