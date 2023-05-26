@@ -119,7 +119,6 @@ function Lucian:cross(v1, v2)
     return v
 end
 
-
 function Lucian:getRTarget()
     if self.rTarget then return end
     if self.myHero:has_buff("LucianR") then return end
