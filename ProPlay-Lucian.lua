@@ -13,7 +13,7 @@ function Lucian:new()
 end
 
 function Lucian:init()
-    local LuaVersion = 0.5
+    local LuaVersion = 0.6
 	local LuaName = "ProPlay-Lucian"
 	local lua_file_name = "ProPlay-Lucian.lua"
 	local lua_url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/ProPlay-Lucian.lua"
@@ -155,7 +155,7 @@ function Lucian:magnetTarget()
     local newPos = targetPos:subtract(dirToTarget:multiply(vec3.new(followDistance, followDistance, followDistance)))
     newPos = newPos:add(offsetDir:multiply(vec3.new(followDistance, followDistance, followDistance)))
 
-    if myHero:distance_to(targetPos) <= followDistance then 
+    if self.myHero:distance_to(targetPos) <= followDistance then 
         issueorder:stop(newPos)
     else
         issueorder:move(newPos)
