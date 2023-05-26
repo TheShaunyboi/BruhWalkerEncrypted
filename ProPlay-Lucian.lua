@@ -42,7 +42,7 @@ function Lucian:init()
     self.qDelay = nil
     self.aaComplete = false
     self.rTarget = nil
-    self.version = 0.5
+    self.version = 0.6
     self:create_menu()
 
     client:set_event_callback("on_tick_always", function() self:on_tick_always() end)
