@@ -13,7 +13,7 @@ function Lucian:new()
 end
 
 function Lucian:init()
-    local LuaVersion = 0.4
+    local LuaVersion = 0.5
 	local LuaName = "ProPlay-Lucian"
 	local lua_file_name = "ProPlay-Lucian.lua"
 	local lua_url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/ProPlay-Lucian.lua"
@@ -42,15 +42,13 @@ function Lucian:init()
     self.qDelay = nil
     self.aaComplete = false
     self.rTarget = nil
-    self.version = 0.4
+    self.version = 0.5
     self:create_menu()
 
     client:set_event_callback("on_tick_always", function() self:on_tick_always() end)
     client:set_event_callback("on_post_attack", function(target) self:on_post_attack(target) end)
     client:set_event_callback("on_draw", function() self:on_draw() end)
-    if file_manager:file_exists("DynastyOrb.lua") then
-        orbwalker:AddCallback("OnAfterAttack", function(target) self:OnAfterAttack(target) end)
-    end
+    _G.DynastyOrb:AddCallback("OnAfterAttack", function(target) self:OnAfterAttack(target) end)
 end
 
 function Lucian:create_menu()
@@ -104,21 +102,23 @@ function Lucian:ready(spell)
 end
 
 function Lucian:on_post_attack(target)
-    if file_manager:file_exists("DynastyOrb.lua") then return end
     if not target.is_hero then return end 
     self.aaComplete = true
 end
 
-if not file_manager:file_exists("DynastyOrb.lua") then
-    goto crazybastards
-end
-
-function Lucian:OnAfterAttack(target)      
+function Lucian:OnAfterAttack(target)    
 	if not target.is_hero then return end
     self.aaComplete = true
 end
 
-::crazybastards::
+function Lucian:cross(v1, v2)
+    local x = v1.y * v2.z - v1.z * v2.y
+    local y = v1.z * v2.x - v1.x * v2.z
+    local z = v1.x * v2.y - v1.y * v2.x
+    local v = vec3.new(x, y, z)
+    return v
+end
+
 
 function Lucian:getRTarget()
     if self.rTarget then return end
@@ -156,7 +156,11 @@ function Lucian:magnetTarget()
     local newPos = targetPos:subtract(dirToTarget:multiply(vec3.new(followDistance, followDistance, followDistance)))
     newPos = newPos:add(offsetDir:multiply(vec3.new(followDistance, followDistance, followDistance)))
 
-    orbwalker:move_to(newPos.x, newPos.y, newPos.z)
+    if myHero:distance_to(targetPos) <= followDistance then 
+        issueorder:stop(newPos)
+    else
+        issueorder:move(newPos)
+    end
 end
 
 function Lucian:letsGoBaby()
