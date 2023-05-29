@@ -1,6 +1,6 @@
 do
     local function AutoUpdate()
-		local version = 0.5
+		local version = 0.6
 		local file_name = "Shauns-ChampionAIO.lua"
 		local aio_url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shauns-ChampionAIO.lua"
         http:get_async("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shauns-ChampionAIO.lua.version.txt", function(success, web_version)
@@ -19,20 +19,20 @@ require("Prediction")
 require("PKDamageLib")
 
 -- Create DIR folder if not found
-if not file_manager:directory_exists("Shaun's Sexy Common") then
-	file_manager:create_directory("Shaun's Sexy Common")
+if not file_manager:directory_exists("./Shaun's Sexy Common") then
+	file_manager:create_directory("./Shaun's Sexy Common")
 end
 
 function load_and_run_file(filename)
 	-- Open the file and read contents, if not found download from my GitHub
-	if not file_manager:file_exists("Shaun's Sexy Common//" .. filename) then
+	if not file_manager:file_exists("./Shaun's Sexy Common/" .. filename) then
 	  -- File not found, try downloading it
 	  console:log("Shaun's Champion AIO Message")
 	  console:log("Downloading Champion Script..")
 	  local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/" .. filename
 	  console:log(filename)
-	  http:download_file_async(url, "Shaun's Sexy Common//" .. filename, function(success)
-		if file_manager:file_exists("Shaun's Sexy Common//" .. filename) then
+	  http:download_file_async(url, "./Shaun's Sexy Common/" .. filename, function(success)
+		if file_manager:file_exists("./Shaun's Sexy Common/" .. filename) then
 			-- File found, read and run it
 			local filepath = os.getenv('LOCALAPPDATA') .."/leaguesense/scripts/Shaun's Sexy Common/" .. filename
 			local file = io.open(filepath, "r")
