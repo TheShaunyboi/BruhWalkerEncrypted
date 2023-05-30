@@ -13,7 +13,7 @@ function Lucian:new()
 end
 
 function Lucian:init()
-    local LuaVersion = 0.7
+    local LuaVersion = 0.8
 	local LuaName = "ProPlay-Lucian"
 	local lua_file_name = "ProPlay-Lucian.lua"
 	local lua_url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/ProPlay-Lucian.lua"
@@ -57,6 +57,7 @@ function Lucian:init()
 	end
 
     self.myHero = game.local_player
+    require "Prediction"
     self.ShaunPred = require "ShaunPrediction"
     self.ml = require "VectorMath"
     self.q_harass = {
@@ -71,7 +72,7 @@ function Lucian:init()
     self.aaComplete = false
     self.rTarget = nil
     self.screen_size = game.screen_size
-    self.version = 0.7
+    self.version = 0.8
     self:create_menu()
 
     client:set_event_callback("on_tick_always", function() self:on_tick_always() end)
@@ -97,7 +98,14 @@ function Lucian:create_menu()
 
     self.lucian_enabled = menu:add_checkbox("Enabled", self.lucian_category, 1)
     menu:add_label("ProPlay-Lucian", self.lucian_category)
-    
+
+    self.lucian_rotation = menu:add_subcategory("Combo Rotation Priority", self.lucian_category)
+        self.combo_table = {}
+        self.combo_table[1] = "[Q] First Priority"
+        self.combo_table[2] = "[W] OnHit Only First Priority"
+        self.combo_rotation = menu:add_dropdown("Select Rotation Priority", self.lucian_rotation, self.combo_table, 0)
+    --
+
     self.lucian_combo = menu:add_subcategory("Combo", self.lucian_category)
         self.combo_q = menu:add_checkbox("Use [Q]", self.lucian_combo, 1)
         self.combo_w = menu:add_checkbox("Use [W]", self.lucian_combo, 1)
@@ -128,10 +136,12 @@ function Lucian:create_menu()
     self.lucian_r = menu:add_subcategory("[R] Features", self.lucian_category)
         self.r_key = menu:add_keybinder("Semi Manual [R] Key - Target Closest To Cursor", self.lucian_r, string.byte("A"))
         self.magnet_enabled = menu:add_checkbox("Use [R] Magnet",  self.lucian_r, 1)
+        self.use_w_magnet = menu:add_checkbox("Use [W] before [R] For Speed Boost Passive",  self.lucian_r, 1)
     --
 
     self.lucian_draw = menu:add_subcategory("Draw Features", self.lucian_category)
         self.r_draw = menu:add_checkbox("Draw [R] Range",  self.lucian_draw, 1)
+        self.q_ext_draw = menu:add_checkbox("Draw [Q] Extended Range",  self.lucian_draw, 1)
     --
 
     menu:add_label("version "..(tostring(self.version)), self.lucian_category)
@@ -228,13 +238,22 @@ function Lucian:getRTarget()
     if self.rTarget then return end
     if self.myHero:has_buff("LucianR") then return end
     if not self:ready(SLOT_R) then return end
+    local use_w = menu:get_value(self.use_w_magnet) == 1 
 
     local rRange = 1200
     local newTarget = selector:find_target(rRange, mode_cursor)
     if newTarget then
-        local p = newTarget.origin
-        spellbook:cast_spell(SLOT_R, 0.25, p.x, p.y, p.z)
         self.rTarget = newTarget
+        local p = self.rTarget.origin
+
+        if use_w and self:ready(SLOT_W) and self.rTarget:distance_to(self.myHero.origin) <= 800 then
+            spellbook:cast_spell(SLOT_W, 0.25, p.x, p.y, p.z)
+            spellbook:cast_spell(SLOT_R, 0.25, p.x, p.y, p.z)
+        end 
+
+        if (use_w and not self:ready(SLOT_W)) or not use_w or self.rTarget:distance_to(self.myHero.origin) > 800 then 
+            spellbook:cast_spell(SLOT_R, 0.25, p.x, p.y, p.z)
+        end
     end
 end
 
@@ -287,12 +306,13 @@ end
 function Lucian:letsGoBaby()
     local keyHeld = game:is_key_down(menu:get_value(self.r_key))
     local use_magnet = menu:get_value(self.magnet_enabled) == 1 
-    
+    local use_w = menu:get_value(self.use_w_magnet) == 1 
+
     if keyHeld and not self.rTarget then
         self:getRTarget()
     end
 
-    if self.myHero:has_buff("LucianR") and keyHeld and use_magnet then
+    if self.myHero:has_buff("LucianR") and keyHeld and use_magnet --[[and ((use_w and not self:ready(SLOT_W)) or not use_w)]] then
         self:magnetTarget()
     end
     
@@ -311,6 +331,74 @@ function Lucian:comboMotherfuckers()
 
     local target = orbwalker:get_orbwalker_target()
     if (not target or not target.is_valid or not target.is_hero) then return end 
+    if self.myHero:has_buff("LucianPassiveBuff") then return end 
+
+    local qRange = 500 + target.bounding_radius
+    if use_q and self:ready(SLOT_Q) and target and target:distance_to(self.myHero.origin) <= qRange then
+        spellbook:cast_spell_targetted(SLOT_Q, target, self.qDelay or 0.25)
+        self.aaComplete = false
+    end
+
+    if not self.aaComplete then return end
+    if self:ready(SLOT_Q) then return end
+
+    if use_e and self:ready(SLOT_E) then
+        if (e_mouse and e_key or not e_mouse) then
+
+            if use_e_short and (not target.is_melee or target:health_percentage() < 35) then
+                local p = self.ml.Extend(game.mouse_pos, self.myHero.origin, -100)
+                spellbook:cast_spell(SLOT_E, 0.25, p.x, p.y, p.z)
+                self.aaComplete = false
+            else
+                local m = game.mouse_pos
+                spellbook:cast_spell(SLOT_E, 0.25, m.x, m.y, m.z)
+                self.aaComplete = false
+            end
+        end
+    end
+
+    if (not use_w or not self:ready(SLOT_W)) then return end
+
+    if (not e_mouse and (not self:ready(SLOT_E) or not use_e)) or (e_mouse and not e_key or not self:ready(SLOT_E)) then
+        if target then
+            local p = target.origin
+            spellbook:cast_spell(SLOT_W, 0.25, p.x, p.y, p.z)
+            self.aaComplete = false
+        end
+    end
+end
+
+function Lucian:comboMotherfuckers_wRotation()
+    local use_q = menu:get_value(self.combo_q) == 1 
+    local use_w = menu:get_value(self.combo_w) == 1 
+    local use_e = menu:get_value(self.combo_e) == 1 
+    local use_e_short = menu:get_value(self.combo_e_short) == 1 
+    local e_mouse = menu:get_value(self.e_mouse_combo) == 1 
+    local e_key = game:is_key_down(menu:get_value(self.e_key))
+
+    local wtarget = selector:find_target(850, mode_health)
+    local target = orbwalker:get_orbwalker_target()
+
+    if self.myHero:has_buff("LucianPassiveBuff") then return end 
+
+    if use_w and self:ready(SLOT_W) and wtarget then
+        local hit_speed = 1600
+        local time = wtarget:distance_to(self.myHero.origin) / hit_speed
+        local w = {
+            source = self.myHero,
+            speed = math.huge, range = 800,
+            delay = time, radius = 55,
+            collision = {"minion", "wind_wall"},
+            type = "linear", hitbox = true
+        }
+
+        local pred = self.ShaunPred:calculatePrediction(wtarget, w, self.myHero)
+        if pred and pred.hitChance >= 0.45 then
+            local p = pred.castPos
+            spellbook:cast_spell(SLOT_W, 0.25, p.x, p.y, p.z)
+        end
+    end
+
     if self.myHero:has_buff("LucianPassiveBuff") then return end 
 
     local qRange = 500 + target.bounding_radius
@@ -456,7 +544,12 @@ function Lucian:on_tick_always()
     if self.myHero.is_winding_up then return end 
 
     if combo:get_mode() == 1 then
-        self:comboMotherfuckers()
+        if menu:get_value(self.combo_rotation) == 0 then
+            self:comboMotherfuckers()
+        elseif menu:get_value(self.combo_rotation) == 1 then
+            self:comboMotherfuckers_wRotation()
+        end
+
     elseif combo:get_mode() == 2 then
         self:harassGayboys()
     elseif combo:get_mode() == 3 then
@@ -475,8 +568,14 @@ end
 
 function Lucian:on_draw()
     local use_q_ext = menu:get_value(self.harass_q_ext) == 1 
+    local draw_q_ext = menu:get_value(self.q_ext_draw) == 1 
+
     if use_q_ext then
         renderer:draw_text_centered(self.screen_size.width / 2, 0, "[Q] Extended Harass Enabled")
+    end
+
+    if draw_q_ext and self:ready(SLOT_Q) then
+        renderer:draw_circle(self.myHero.origin.x, self.myHero.origin.y, self.myHero.origin.z, 1000, 0, 255, 255, 255)
     end
 
     local draw_r = menu:get_value(self.r_draw) == 1 
