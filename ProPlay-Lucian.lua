@@ -312,7 +312,7 @@ function Lucian:letsGoBaby()
         self:getRTarget()
     end
 
-    if self.myHero:has_buff("LucianR") and keyHeld and use_magnet --[[and ((use_w and not self:ready(SLOT_W)) or not use_w)]] then
+    if self.myHero:has_buff("LucianR") and keyHeld and use_magnet then
         self:magnetTarget()
     end
     
