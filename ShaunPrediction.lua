@@ -2,7 +2,7 @@ local pred_loaded = package.loaded["ShaunPrediction"]
 if not pred_loaded then return end
 
 local ShaunPrediction = {}
-local menu_version = 0.11
+local menu_version = 0.12
 local menu_hitchance
 local menu_target
 local menu_output
@@ -553,7 +553,7 @@ end
 if not _G.ShaunPredictionInitialized then
     do
         local function Update()
-            local version = 0.11
+            local version = 0.12
             local file_name = "ShaunPrediction.lua"
             local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/ShaunPrediction.lua"
             
@@ -652,6 +652,7 @@ function on_new_path(obj, path)
     end
 end
 
+require "Prediction"
 client:set_event_callback("on_new_path", on_new_path)
 client:set_event_callback("on_draw", on_draw)
 return ShaunPrediction
