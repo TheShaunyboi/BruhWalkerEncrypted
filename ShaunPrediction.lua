@@ -2,7 +2,7 @@ local pred_loaded = package.loaded["ShaunPrediction"]
 if not pred_loaded then return end
 
 local ShaunPrediction = {}
-local menu_version = 0.12
+local menu_version = 0.13
 local menu_hitchance
 local menu_target
 local menu_output
@@ -193,80 +193,6 @@ end
 --------------------------------------------------------------------------------------------------------------------------------
 
 function ShaunPrediction:calculateHitChance(target, ability, source, predictedPosition)
-    local targetPos = vec3.new(target.origin.x, target.origin.y, target.origin.z)
-    local myHeroPos = vec3.new(source.origin.x, source.origin.y, source.origin.z)
-
-    -- Calculate hit chance
-    local directionToPredictedPosition = self:Sub(predictedPosition, myHeroPos)
-    local directionToActualPosition = self:Sub(targetPos, myHeroPos)
-
-    local angleBetweenPositions = self:AngleBetweenVectors(directionToPredictedPosition, directionToActualPosition)
-    local angularHitChance = 1 - math.min(angleBetweenPositions / math.pi, 1)
-
-    local hitChance
-    local targetPath = target.path
-
-    if targetPath.is_dashing or targetPath.is_moving then
-        hitChance = 0.5 * angularHitChance
-    else
-        -- Use a different calculation for stationary targets (e.g a higher base hit chance)
-        hitChance = 0.9 - 0.4 * math.min(self:GetDistanceSqr2(myHeroPos, predictedPosition) / ability.range, 1)
-    end
-
-    local moveSpeed = target.move_speed
-    if targetPath.is_dashing or (targetPath.is_moving and moveSpeed > 0) then
-        hitChance = 0.5 * angularHitChance * (moveSpeed / 350 + 0.5)
-    else
-        -- Use a different calculation for stationary targets (e.g a higher base hit chance)
-        hitChance = 0.9 - 0.4 * math.min(self:GetDistanceSqr2(myHeroPos, predictedPosition) / ability.range, 1)
-    end
-
-    -- Adjust if target is auto-attacking
-    if target.is_auto_attacking then
-        local autoAttackBonus = 0.2 -- adjust value maybe?
-        hitChance = hitChance + autoAttackBonus
-    end
-
-    -- Dynamic reaction time to hitChance calculation based on average click speed
-    local useReactionTime = menu:get_value(menu_reactionTime) == 1
-    self.averageClickSpeed = averageClickSpeed
-
-    if useReactionTime and self.averageClickSpeed then
-        local targetId = target.object_id
-        local targetAverageClickSpeed = self.averageClickSpeed[targetId] or 0
-        if targetAverageClickSpeed > 0 then
-            local dodgeFactor = self:calculateDodgeFactor(targetAverageClickSpeed)
-            hitChance = hitChance * (1 - dodgeFactor)
-        end
-    end
-
-    if next(ability.collision) ~= nil then
-        local collisionPredPos = _G.Prediction:get_collision(ability, predictedPosition, target)
-        local collisionEnemy = _G.Prediction:get_collision(ability, targetPos, target)
-        if next(collisionPredPos) ~= nil or next(collisionEnemy) ~= nil then
-            return nil
-        end
-    end
-    
-    -- Adjust hit chance based on target's bounding radius, ability's width, radius, or angle
-    local distanceDifference = math.abs(self:GetDistanceSqr2(myHeroPos, predictedPosition) - self:GetDistanceSqr2(myHeroPos, targetPos))
-    local totalRadius
-
-    if ability.type == "linear" or ability.type == "circular" then
-        totalRadius = target.bounding_radius + ability.radius
-
-    elseif ability.type == "cone" then
-        totalRadius = target.bounding_radius + math.tan(math.rad(ability.angle / 2)) * distanceToTarget
-    end
-    
-    if distanceDifference <= totalRadius then
-        hitChance = hitChance * 1.25
-    end
-
-    return hitChance
-end
-
-function ShaunPrediction:calculateHitChance_BETA(target, ability, source, predictedPosition)
     local targetPos = vec3.new(target.origin.x, target.origin.y, target.origin.z)
     local myHeroPos = vec3.new(source.origin.x, source.origin.y, source.origin.y)
     
@@ -530,12 +456,7 @@ function ShaunPrediction:calculatePrediction(target, ability, source)
     end
 
     local hitChance
-    local useBetaHitChance = menu:get_value(menu_hitchance_BETA) == 1
-    if useBetaHitChance then
-        hitChance = self:calculateHitChance_BETA(target, ability, source, predictedPosition)
-    else
-        hitChance = self:calculateHitChance(target, ability, source, predictedPosition)
-    end
+    hitChance = self:calculateHitChance(target, ability, source, predictedPosition)
 
     if hitChance == nil then
         return nil
@@ -553,7 +474,7 @@ end
 if not _G.ShaunPredictionInitialized then
     do
         local function Update()
-            local version = 0.12
+            local version = 0.13
             local file_name = "ShaunPrediction.lua"
             local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/ShaunPrediction.lua"
             
@@ -588,7 +509,6 @@ if not _G.ShaunPredictionInitialized then
         menu_reactionTime = menu:add_checkbox("Use Dodge Factor", reaction_time, 1)
     --
     hitchance_stability = menu:add_subcategory("Hit Chance Settings", pred_category)
-        menu_hitchance_BETA = menu:add_checkbox("Use New Hit Chance Formula [BETA]", hitchance_stability, 1)
         menu_enableStability = menu:add_checkbox("Use Hit Chance Stability [BETA]", hitchance_stability, 0)
         menu:add_label("How Many Counts We Consider Within Stability Calculation", hitchance_stability)
         a_table = {}
