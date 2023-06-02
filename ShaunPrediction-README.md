@@ -9,19 +9,27 @@ Spell type support = "circular", "linear" & "cone"
 ```lua
 ShaunPred = require "ShaunPrediction"
 
+Linear Example
 spell_data = {
-source = myHero, speed = 2000, range = 1180, delay = 0.25, radius = 60, 
+source = myHero, speed = math.huge, range = 1180, delay = timeToDmg, radius = 60, 
 collision = {"minion", "wind_wall", "enemy_hero"}, type = "linear", hitbox = true
 
 local function on_tick()
-    local myHero = game.local_player
-    local source = myHero
-    local pred = ShaunPred:calculatePrediction(target, spell_data, source)
+        local hitSpeed = 2000
+        local timeToDmg = target:distance_to(myHero.origin) / hitSpeed
+        local q = {
+            source = myHero,
+            speed = math.huge, range = 1180,
+            delay = timeToDmg, radius = 60,
+            collision = {"minion", "wind_wall"},
+            type = "linear", hitbox = true
+        }
 
-    if pred and qpred.hitChance >= 0.45 then
-        local p = pred.castPos
-        spellbook:cast_spell(SLOT_Q, 0.25, p.x, p.y, p.z)
-    end
+        local pred = ShaunPred:calculatePrediction(target, q, myHero)
+        if pred and pred.hitChance >= 0.45 then
+            local p = pred.castPos
+            spellbook:cast_spell(SLOT_Q, 0.25, p.x, p.y, p.z)
+        end
 end
 ```
 ```lua
