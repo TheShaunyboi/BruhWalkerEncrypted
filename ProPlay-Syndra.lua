@@ -13,7 +13,7 @@ function Syndra:new()
 end
 
 function Syndra:init()
-    local LuaVersion = 0.4
+    local LuaVersion = 0.5
 	local LuaName = "ProPlay-Syndra"
 	local lua_file_name = "ProPlay-Syndra.lua"
 	local lua_url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/ProPlay-Syndra.lua"
@@ -62,7 +62,7 @@ function Syndra:init()
     self.W_input = {
         source = myHero,
         speed = math.huge, range = 950,
-        delay = 0.90, radius = 160,
+        delay = 0.80, radius = 160,
         collision = {},
         type = "circular", hitbox = false
     }
@@ -74,7 +74,9 @@ function Syndra:init()
     self.ballHolder = {}
     self.ballTimer = {}
     self.bounding_radiuses = {}
-    self.version = 0.4
+    self.ball_id = nil
+    self.grab_object = nil
+    self.version = 0.5
     self:create_menu()
 
     client:set_event_callback("on_tick_always", function() self:on_tick_always() end)
@@ -107,8 +109,8 @@ function Syndra:create_menu()
 
     self.Syndra_pred = menu:add_subcategory("Prediction", self.Syndra_category)
         menu:add_label("Shaun Prediction", self.Syndra_pred)
-        self.q_hitchance = menu:add_slider("[Q] Hit Chance", self.Syndra_pred, 1, 100, 45)
-        self.w_hitchance = menu:add_slider("[W] Hit Chance", self.Syndra_pred, 1, 100, 45)
+        self.q_hitchance_percent = menu:add_slider("[Q] Hit Chance %", self.Syndra_pred, 1, 100, 40)
+        self.w_hitchance_percent = menu:add_slider("[W] Hit Chance %", self.Syndra_pred, 1, 100, 35)
 
 
     self.Syndra_combo = menu:add_subcategory("Combo", self.Syndra_category)
@@ -183,9 +185,28 @@ function Syndra:GetLineTargetCount(source, pos, radius)
     for _, target in ipairs(self:enemyHeroes()) do
         local range = 1000 * 1000
         if target:distance_to(self.myHero.origin) <= range then
-            local pointSegment, pointLine, isOnSegment = self:VectorPointProjectionOnLineSegment(source.origin, pos, target.origin)
+            local pointSegment, pointLine, isOnSegment = self:VectorPointProjectionOnLineSegment(source.origin, pos.origin, target.origin)
             if pointSegment and isOnSegment and (self:GetDistanceSqr2(target.origin, pointSegment) <= (target.bounding_radius + radius) * (target.bounding_radius + radius)) then
                 count = count + 1
+            end
+        end
+    end
+    return count
+end
+
+function Syndra:GetLineTargetCount_Combo(source, target, radius)
+    local count = 0
+    for _, ball in pairs(self.ballHolder) do
+        if not ball.path.is_moving and ball.is_alive then
+            local range = 1000 * 1000
+            if target:distance_to(self.myHero.origin) <= range then
+                local pointSegment, pointLine, isOnSegment = self:VectorPointProjectionOnLineSegment(source.origin, target.origin, ball.origin)
+                if pointSegment and isOnSegment and (self:GetDistanceSqr2(ball.origin, pointSegment) <= (ball.bounding_radius + radius) * (ball.bounding_radius + radius)) then
+                    count = count + 1
+                    if count >= 1 then
+                        self.ball_id = ball.object_id
+                    end
+                end
             end
         end
     end
@@ -347,11 +368,13 @@ function Syndra:comboMotherfuckers()
     local use_w = menu:get_value(self.combo_w) == 1
     local use_e = menu:get_value(self.combo_e) == 1
     local draw_grab = menu:get_value(self.grab_draw) == 1
-    local q_hc = menu:get_value(self.q_hitchance) / 100
-    local w_hc = menu:get_value(self.w_hitchance) / 100
+    local q_hc = menu:get_value(self.q_hitchance_percent) / 100
+    local w_hc = menu:get_value(self.w_hitchance_percent) / 100
+
+    ------------------------------------------------------------[TS & Pred]----------------------------------------------------------------
 
     local pred 
-    if self:qReady() and self:ready(SLOT_E) then
+    if (self:qReady() and self:ready(SLOT_E)) or (not self:qReady() and self:ready(SLOT_E)) then
         target = selector:find_target(self.Q_input.range, mode_health)
         pred = self.ShaunPred:calculatePrediction(target, self.Q_input, self.myHero)
 
@@ -360,13 +383,17 @@ function Syndra:comboMotherfuckers()
         pred = self.ShaunPred:calculatePrediction(target, self.QOnly_input, self.myHero)
     end
 
-    if use_q and self:qReady() and (not self:ready(SLOT_E) or not use_e) and target:distance_to(self.myHero.origin) <= self.Q.range then
+   ------------------------------------------------------------[Q]----------------------------------------------------------------
+
+    if use_q and self:qReady() and (not self:ready(SLOT_E) or not use_e) and target:distance_to(self.myHero.origin) <= self.Q.range + target.bounding_radius then
         if pred and pred.hitChance >= q_hc then
             local p = pred.castPos
             spellbook:cast_spell(SLOT_Q, 0.25, p.x, p.y, p.z)
             return
         end
     end
+
+    ------------------------------------------------------------[QE/E]----------------------------------------------------------------
 
     if use_q and use_e and self:qReady() and self:ready(SLOT_E) and target:distance_to(self.myHero.origin) <= self.Q_input.range then
         if pred and pred.hitChance >= q_hc then
@@ -376,6 +403,17 @@ function Syndra:comboMotherfuckers()
             return
         end
     end
+
+    if use_e and target and not self:qReady() and self:ready(SLOT_E) and target:distance_to(self.myHero.origin) <= self.Q_input.range then
+        local count = self:GetLineTargetCount_Combo(self.myHero, target, 50)
+        if count >= 1 then
+            local p = target.origin
+            spellbook:cast_spell(SLOT_E, 0.25, p.x, p.y, p.z)
+            return
+        end
+    end
+
+    ------------------------------------------------------------[W]----------------------------------------------------------------
 
     if use_w and self:ready(SLOT_W) and not self:holdingObject() then
         local allEntities = self:mergeAllTables(self.ballHolder, game.minions, game.jungle_minions, game.pets)
@@ -387,42 +425,47 @@ function Syndra:comboMotherfuckers()
                     renderer:draw_circle(d.x, d.y, d.z, 50, 0, 0, 255, 255)
                 end
 
-                if not self:qReady() and not self:ready(SLOT_E) and grabObject:distance_to(self.myHero.origin) <= self.W.range then
-                    local p = grabObject.origin
-                    spellbook:cast_spell(SLOT_W, 0.5, p.x, p.y, p.z)
-                    self.wPickupTime = game.game_time + 0.5
-                    return
+                if not self:qReady() and not self:ready(SLOT_E) and grabObject:distance_to(self.myHero.origin) <= self.W.range + grabObject.bounding_radius then
+                    if self.ball_id ~= grabObject.object_id then
+                        local p = grabObject.origin
+                        spellbook:cast_spell(SLOT_W, 0.5, p.x, p.y, p.z)
+                        self.wPickupTime = game.game_time + 0.4
+                        self.grab_object = grabObject
+                        self.ball_id = nil
+                        return
+                    end
                 end
             end
         end
     end
 
-    if use_w and self:holdingObject() and target:distance_to(self.myHero.origin) <= self.W.range and not self.ball_moving then
-        if self.wPickupTime < game.game_time then
+    if use_w and self:holdingObject() and target:distance_to(self.myHero.origin) <= self.W_input.range + self.grab_object.bounding_radius and not self.ball_moving then
+        self.W_input.range = 950 + self.grab_object.bounding_radius
+        local throwPred = self.ShaunPred:calculatePrediction(target, self.W_input, self.myHero)
 
-            local throwPred = self.ShaunPred:calculatePrediction(target, self.W_input, self.myHero)
-            if throwPred and throwPred.hitChance >= w_hc then
-                local p = throwPred.castPos
-                spellbook:cast_spell(SLOT_W, 0.5, p.x, p.y, p.z)
-                return
-            end
+        if self.wPickupTime <= game.game_time and throwPred and throwPred.hitChance >= w_hc then
+            local p = throwPred.castPos
+            spellbook:cast_spell(SLOT_W, 0.5, p.x, p.y, p.z)
+            return
         end
-    end  
+    end
 end
 
 function Syndra:harassGayboys()
     local mana = menu:get_value(self.harass_mana)
     if self.myHero:mana_percentage() < mana then return end
 
-    local use_q = menu:get_value(self.harass_q) == 1
-    local use_w = menu:get_value(self.harass_w) == 1
-    local use_e = menu:get_value(self.harass_e) == 1
+    local use_q = menu:get_value(self.combo_q) == 1
+    local use_w = menu:get_value(self.combo_w) == 1
+    local use_e = menu:get_value(self.combo_e) == 1
     local draw_grab = menu:get_value(self.grab_draw) == 1
-    local q_hc = menu:get_value(self.q_hitchance) / 100
-    local w_hc = menu:get_value(self.w_hitchance) / 100
+    local q_hc = menu:get_value(self.q_hitchance_percent) / 100
+    local w_hc = menu:get_value(self.w_hitchance_percent) / 100
+
+    ------------------------------------------------------------[TS & Pred]----------------------------------------------------------------
 
     local pred 
-    if self:qReady() and self:ready(SLOT_E) then
+    if (self:qReady() and self:ready(SLOT_E)) or (not self:qReady() and self:ready(SLOT_E)) then
         target = selector:find_target(self.Q_input.range, mode_health)
         pred = self.ShaunPred:calculatePrediction(target, self.Q_input, self.myHero)
 
@@ -431,13 +474,17 @@ function Syndra:harassGayboys()
         pred = self.ShaunPred:calculatePrediction(target, self.QOnly_input, self.myHero)
     end
 
-    if use_q and self:qReady() and (not self:ready(SLOT_E) or not use_e) and target:distance_to(self.myHero.origin) <= self.Q.range then
+   ------------------------------------------------------------[Q]----------------------------------------------------------------
+
+    if use_q and self:qReady() and (not self:ready(SLOT_E) or not use_e) and target:distance_to(self.myHero.origin) <= self.Q.range + target.bounding_radius then
         if pred and pred.hitChance >= q_hc then
             local p = pred.castPos
             spellbook:cast_spell(SLOT_Q, 0.25, p.x, p.y, p.z)
             return
         end
     end
+
+    ------------------------------------------------------------[QE/E]----------------------------------------------------------------
 
     if use_q and use_e and self:qReady() and self:ready(SLOT_E) and target:distance_to(self.myHero.origin) <= self.Q_input.range then
         if pred and pred.hitChance >= q_hc then
@@ -447,6 +494,17 @@ function Syndra:harassGayboys()
             return
         end
     end
+
+    if use_e and target and not self:qReady() and self:ready(SLOT_E) and target:distance_to(self.myHero.origin) <= self.Q_input.range then
+        local count = self:GetLineTargetCount_Combo(self.myHero, target, 50)
+        if count >= 1 then
+            local p = target.origin
+            spellbook:cast_spell(SLOT_E, 0.25, p.x, p.y, p.z)
+            return
+        end
+    end
+
+    ------------------------------------------------------------[W]----------------------------------------------------------------
 
     if use_w and self:ready(SLOT_W) and not self:holdingObject() then
         local allEntities = self:mergeAllTables(self.ballHolder, game.minions, game.jungle_minions, game.pets)
@@ -458,27 +516,30 @@ function Syndra:harassGayboys()
                     renderer:draw_circle(d.x, d.y, d.z, 50, 0, 0, 255, 255)
                 end
 
-                if not self:qReady() and not self:ready(SLOT_E) and grabObject:distance_to(self.myHero.origin) <= self.W.range then
-                    local p = grabObject.origin
-                    spellbook:cast_spell(SLOT_W, 0.5, p.x, p.y, p.z)
-                    self.wPickupTime = game.game_time + 0.5
-                    return
+                if not self:qReady() and not self:ready(SLOT_E) and grabObject:distance_to(self.myHero.origin) <= self.W.range + grabObject.bounding_radius then
+                    if self.ball_id ~= grabObject.object_id then
+                        local p = grabObject.origin
+                        spellbook:cast_spell(SLOT_W, 0.5, p.x, p.y, p.z)
+                        self.wPickupTime = game.game_time + 0.4
+                        self.grab_object = grabObject
+                        self.ball_id = nil
+                        return
+                    end
                 end
             end
         end
     end
 
-    if use_w and self:holdingObject() and target:distance_to(self.myHero.origin) <= self.W.range and not self.ball_moving then
-        if self.wPickupTime < game.game_time then
+    if use_w and self:holdingObject() and target:distance_to(self.myHero.origin) <= self.W_input.range + self.grab_object.bounding_radius and not self.ball_moving then
+        self.W_input.range = 950 + self.grab_object.bounding_radius
+        local throwPred = self.ShaunPred:calculatePrediction(target, self.W_input, self.myHero)
 
-            local throwPred = self.ShaunPred:calculatePrediction(target, self.W_input, self.myHero)
-            if throwPred and throwPred.hitChance >= w_hc then
-                local p = throwPred.castPos
-                spellbook:cast_spell(SLOT_W, 0.5, p.x, p.y, p.z)
-                return
-            end
+        if self.wPickupTime <= game.game_time and throwPred and throwPred.hitChance >= w_hc then
+            local p = throwPred.castPos
+            spellbook:cast_spell(SLOT_W, 0.5, p.x, p.y, p.z)
+            return
         end
-    end 
+    end
 end
 
 function Syndra:bigBalls()
@@ -521,13 +582,12 @@ function Syndra:autoStun()
     local countReq = menu:get_value(self.auto_stun_number)
 
     for _, e_target in ipairs(self:enemyHeroes()) do
-        local pred = self.ShaunPred:calculatePrediction(e_target, self.Q_input, self.myHero)
-        if pred then
-            local pos = pred.castPos
-            local count = self:GetLineTargetCount(self.myHero, e_target.origin, 55)
+        if self.myHero:distance_to(e_target.origin) <= self.Q_input.range then
+            local count = self:GetLineTargetCount(self.myHero, e_target, 50)
             if count and count >= countReq then
-                spellbook:cast_spell(SLOT_Q, 0.25, pos.x, pos.y, pos.z)
-                spellbook:cast_spell(SLOT_E, 0.25, pos.x, pos.y, pos.z)
+                local p = e_target.origin
+                spellbook:cast_spell(SLOT_Q, 0.25, p.x, p.y, p.z)
+                spellbook:cast_spell(SLOT_E, 0.25, p.x, p.y, p.z)
                 return
             end
         end
@@ -545,7 +605,6 @@ function Syndra:manualR()
         return
     end
 end
-    
 
 function Syndra:on_tick_always()
     if menu:get_value(self.Syndra_enabled) == 0 then return end 
@@ -599,6 +658,13 @@ function Syndra:on_draw()
         end
     end
 
+    if self.ball_id and not self:ready(SLOT_E) then
+        local time = game.game_time + 0.4
+        if game.game_time >= time then
+            self.ball_id = nil
+        end
+    end
+
     if draw_q and self:qReady() then
         renderer:draw_circle(heroPos.x, heroPos.y, heroPos.z, self.Q.range, 255, 255, 0, 255)
     end
@@ -627,8 +693,7 @@ function Syndra:on_draw()
                 end
             end
 
-            local totaliseDmg = damage
-            if totaliseDmg > target.health and (not protected or not overKillCheck) then
+            if damage > target.health and (not protected or not overKillCheck) then
                 renderer:draw_text_big_centered(text.x, text.y + 50, "Ready Spell Rotation Can Kill")
             end
         end
