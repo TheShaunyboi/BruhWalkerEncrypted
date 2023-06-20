@@ -2,7 +2,7 @@ local pred_loaded = package.loaded["ShaunPrediction"]
 if not pred_loaded then return end
 
 local ShaunPrediction = {}
-local menu_version = 0.13
+local menu_version = 0.14
 local menu_hitchance
 local menu_target
 local menu_output
@@ -190,6 +190,86 @@ function ShaunPrediction:calculateDodgeFactor(clickFrequency)
     return maxDodgeFactor * (1 - math.exp(-clickFrequency))
 end
 
+function ShaunPrediction:invulBuff(obj)
+    if not obj then return end
+
+    if obj:has_buff("ChronoRevive") then
+        local buff = obj:get_buff("ChronoRevive")
+        if buff.is_valid then
+            local end_time = buff.end_time
+            local time_left = end_time - game.game_time
+            return time_left
+        end
+    end
+
+    if obj.is_alive then
+        if obj:has_buff("UndyingRage") then
+            local buff = obj:get_buff("UndyingRage")
+            if buff.is_valid then
+                local end_time = buff.end_time
+                local time_left = end_time - game.game_time
+                return time_left
+            end
+    
+        elseif obj:has_buff("KayleR") then
+            local buff = obj:get_buff("KayleR")
+            if buff.is_valid then
+                local end_time = buff.end_time
+                local time_left = end_time - game.game_time
+                return time_left
+            end
+
+        elseif obj:has_buff("LissandraRSelf") then
+            local buff = obj:get_buff("LissandraRSelf")
+            if buff.is_valid then
+                local end_time = buff.end_time
+                local time_left = end_time - game.game_time
+                return time_left
+            end
+    
+        elseif obj:has_buff("KindredRNoDeathBuff") then
+            local buff = obj:get_buff("KindredRNoDeathBuff")
+            if buff.is_valid then
+                local end_time = buff.end_time
+                local time_left = end_time - game.game_time
+                return time_left
+            end
+    
+        elseif obj:has_buff("FioraW") then
+            local buff = obj:get_buff("FioraW")
+            if buff.is_valid then
+                local end_time = buff.end_time
+                local time_left = end_time - game.game_time
+                return time_left
+            end
+    
+        elseif obj:has_buff("VladimirSanguinePool") then
+            local buff = obj:get_buff("VladimirSanguinePool")
+            if buff.is_valid then
+                local end_time = buff.end_time
+                local time_left = end_time - game.game_time
+                return time_left
+            end
+    
+        elseif obj:has_buff("TaricR") then
+            local buff = obj:get_buff("TaricR")
+            if buff.is_valid then
+                local end_time = buff.end_time
+                local time_left = end_time - game.game_time
+                return time_left
+            end
+
+        elseif obj:has_buff("ZhonyasRingShield") then
+            local buff = obj:get_buff("ZhonyasRingShield")
+            if buff.is_valid then
+                local end_time = buff.end_time
+                local time_left = end_time - game.game_time
+                return time_left
+            end
+        end
+    end
+end
+
 --------------------------------------------------------------------------------------------------------------------------------
 
 function ShaunPrediction:calculateHitChance(target, ability, source, predictedPosition)
@@ -202,7 +282,6 @@ function ShaunPrediction:calculateHitChance(target, ability, source, predictedPo
     local baseHitChance = math.max(0, 1 - timeToHit)
 
     -- Adjust for movement speed
-    local targetPath = target.path
     local targetMovementSpeed = target.move_speed
     local speedFactor = math.max(1 - targetMovementSpeed / 900, 0.5) -- decrease hit chance based on target's movement speed
     baseHitChance = baseHitChance * speedFactor
@@ -241,7 +320,7 @@ function ShaunPrediction:calculateHitChance(target, ability, source, predictedPo
     local enemyMinions = self:GetEnemyMinions(targetPos, ability.range)
     for _, minion in ipairs(enemyMinions) do
         if minion then
-            local distanceToMinion = minion:distance_to(targetPos)
+            local distanceToMinion = minion:distance_to(predictedPosition)
             if distanceToMinion < totalRadius then
                 baseHitChance = baseHitChance * 0.5
                 break
@@ -327,7 +406,12 @@ function ShaunPrediction:calculatePredictedPosition(target, ability, source)
 
     -- Calculate predicted position based on target's waypoints
     local predictedPosition = targetPos
-    local remainingTravelTime = abilityTravelTime
+    local remainingTravelTime = abilityTravelTime + (game.ping / 2000)
+
+    local targetInvul = self:invulBuff(target) 
+    if targetInvul and remainingTravelTime <= targetInvul then
+        predictedPosition = targetPos
+    end
 
     if not targetPath.is_dashing and not targetPath.is_moving then
         -- Target is stationary, use the actual position as the predicted position
@@ -349,14 +433,13 @@ function ShaunPrediction:calculatePredictedPosition(target, ability, source)
                 remainingTravelTime = remainingTravelTime - timeToReachNextWaypoint
                 predictedPosition = nextWaypoint
             else
-               
                 if nextWaypoint and currentWaypoint then
                     local directionToNextWaypoint = self:Sub(nextWaypoint, currentWaypoint)
                     local moveSpeed = target.move_speed
                     local directionToNextWaypointNormalized = self:Normalize(directionToNextWaypoint)
                     predictedPosition = self:Add(currentWaypoint, self:Mul(directionToNextWaypointNormalized, remainingTravelTime * moveSpeed))
+                    break
                 end
-                break
             end
         end
 
@@ -366,7 +449,7 @@ function ShaunPrediction:calculatePredictedPosition(target, ability, source)
             local currentWaypoint = vec3.new(targetPath.waypoints[1].x, targetPath.waypoints[1].y, targetPath.waypoints[1].z)
             local nextWaypoint = vec3.new(targetPath.waypoints[2].x, targetPath.waypoints[2].y, targetPath.waypoints[2].z)
             local directionToNextWaypoint = self:Sub(nextWaypoint, currentWaypoint)
-            local moveSpeed = targetPath.is_dashing and targetPath.dash_speed or target.move_speed
+            local moveSpeed = target.move_speed
             local directionToNextWaypointNormalized = self:Normalize(directionToNextWaypoint)
             local distanceToMove = self:Mul(directionToNextWaypointNormalized, remainingTravelTime * moveSpeed)
             predictedPosition = self:Add(targetPos, distanceToMove)
@@ -474,7 +557,7 @@ end
 if not _G.ShaunPredictionInitialized then
     do
         local function Update()
-            local version = 0.13
+            local version = 0.14
             local file_name = "ShaunPrediction.lua"
             local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/ShaunPrediction.lua"
             
