@@ -2,7 +2,7 @@ local pred_loaded = package.loaded["ShaunPrediction"]
 if not pred_loaded then return end
 
 local ShaunPrediction = {}
-local menu_version = 0.14
+local menu_version = 0.15
 local menu_hitchance
 local menu_target
 local menu_output
@@ -12,8 +12,6 @@ local menu_output
 function ShaunPrediction:new(target, ability, source)
     local o = {}
     setmetatable(o, self)
-    self.reactionAdjustment = nil
-    self.averageClickSpeed = {}
     self.__index = self
     return o
 end
@@ -406,7 +404,8 @@ function ShaunPrediction:calculatePredictedPosition(target, ability, source)
 
     -- Calculate predicted position based on target's waypoints
     local predictedPosition = targetPos
-    local remainingTravelTime = abilityTravelTime + (game.ping / 2000)
+    local delay = 0.0167
+    local remainingTravelTime = abilityTravelTime + delay
 
     local targetInvul = self:invulBuff(target) 
     if targetInvul and remainingTravelTime <= targetInvul then
@@ -438,6 +437,91 @@ function ShaunPrediction:calculatePredictedPosition(target, ability, source)
                     local moveSpeed = target.move_speed
                     local directionToNextWaypointNormalized = self:Normalize(directionToNextWaypoint)
                     predictedPosition = self:Add(currentWaypoint, self:Mul(directionToNextWaypointNormalized, remainingTravelTime * moveSpeed))
+                end
+                break
+            end
+        end
+
+        -- If the target has clicked far away but is still in spell range..
+        -- calculate the predicted position based on the target's movement direction and remaining travel time
+        if distanceToTarget <= ability.range and targetPath.waypoints[1] and targetPath.waypoints[2] then
+            local currentWaypoint = vec3.new(targetPath.waypoints[1].x, targetPath.waypoints[1].y, targetPath.waypoints[1].z)
+            local nextWaypoint = vec3.new(targetPath.waypoints[2].x, targetPath.waypoints[2].y, targetPath.waypoints[2].z)
+            local directionToNextWaypoint = self:Sub(nextWaypoint, currentWaypoint)
+            local moveSpeed = target.move_speed
+            local directionToNextWaypointNormalized = self:Normalize(directionToNextWaypoint)
+            local distanceToMove = self:Mul(directionToNextWaypointNormalized, remainingTravelTime * moveSpeed)
+            predictedPosition = self:Add(targetPos, distanceToMove)
+        end
+    end
+
+    menu_target = targetPos
+    return predictedPosition
+end
+
+function ShaunPrediction:calculateInterpolationPredictedPosition(target, ability, source)
+    local targetPos = vec3.new(target.origin.x, target.origin.y, target.origin.z)
+    local myHeroPos = vec3.new(source.origin.x, source.origin.y, source.origin.z)
+    local distanceToTarget = self:GetDistanceSqr2(targetPos, myHeroPos)
+
+    if distanceToTarget > ability.range then
+        return nil
+    end
+
+    local targetPath = target.path
+    local abilityTravelTime = ability.range / ability.speed + ability.delay
+
+    -- Calculate predicted position based on target's waypoints
+    local predictedPosition = targetPos
+    local delay = 0.0167
+    local remainingTravelTime = abilityTravelTime + delay
+
+    local targetInvul = self:invulBuff(target) 
+    if targetInvul and remainingTravelTime <= targetInvul then
+        predictedPosition = targetPos
+    end
+
+    if not targetPath.is_dashing and not targetPath.is_moving then
+        -- Target is stationary, use the actual position as the predicted position
+        predictedPosition = targetPos
+    else
+        for i = 1, #targetPath.waypoints - 1 do
+            local currentWaypoint = vec3.new(targetPath.waypoints[i].x, targetPath.waypoints[i].y, targetPath.waypoints[i].z)
+            local nextWaypoint = vec3.new(targetPath.waypoints[i + 1].x, targetPath.waypoints[i + 1].y, targetPath.waypoints[i + 1].z)
+            local waypointDistance = self:GetDistanceSqr2(currentWaypoint, nextWaypoint)
+
+            local timeToReachNextWaypoint
+            if targetPath.is_dashing then
+                timeToReachNextWaypoint = waypointDistance / targetPath.dash_speed
+            else
+                timeToReachNextWaypoint = waypointDistance / target.move_speed
+            end
+
+            if remainingTravelTime > timeToReachNextWaypoint then
+                remainingTravelTime = remainingTravelTime - timeToReachNextWaypoint
+                predictedPosition = nextWaypoint
+            else
+                if nextWaypoint and currentWaypoint then
+                    local directionToNextWaypoint = self:Sub(nextWaypoint, currentWaypoint)
+                    local moveSpeed = target.move_speed
+                    local directionToNextWaypointNormalized = self:Normalize(directionToNextWaypoint)
+
+                    -- Interpolate/extrapolate based on velocity
+                    local velocity = targetPath.velocity
+                    local timeRemaining = remainingTravelTime
+                    local predictedDirection = self:Mul(directionToNextWaypointNormalized, moveSpeed)
+
+                    -- Interpolation: Estimate position between waypoints based on velocity
+                    if velocity and timeRemaining > 0 then
+                        local predictedPositionDelta = self:Mul(velocity, timeRemaining)
+                        predictedPosition = self:Add(predictedPosition, predictedPositionDelta)
+                    end
+
+                    -- Extrapolation: Predict future position beyond last known waypoint
+                    if timeRemaining > 0 then
+                        local predictedPositionDelta = self:Mul(predictedDirection, timeRemaining)
+                        predictedPosition = self:Add(predictedPosition, predictedPositionDelta)
+                    end
                     break
                 end
             end
@@ -523,7 +607,14 @@ end
 --------------------------------------------------------------------------------------------------------------------------------
 
 function ShaunPrediction:calculatePrediction(target, ability, source)
-    local predictedPosition = self:calculatePredictedPosition(target, ability, source)
+    local useInterpolationPred = menu:get_value(menu_interpolationPrediction) == 1
+    local predictedPosition
+    if not useInterpolationPred then
+        predictedPosition = self:calculatePredictedPosition(target, ability, source)
+    else
+        predictedPosition = self:calculateInterpolationPredictedPosition(target, ability, source)
+    end
+
     if not predictedPosition then
         return nil
     end
@@ -538,9 +629,7 @@ function ShaunPrediction:calculatePrediction(target, ability, source)
         end
     end
 
-    local hitChance
-    hitChance = self:calculateHitChance(target, ability, source, predictedPosition)
-
+    local hitChance = self:calculateHitChance(target, ability, source, predictedPosition)
     if hitChance == nil then
         return nil
     end
@@ -557,7 +646,7 @@ end
 if not _G.ShaunPredictionInitialized then
     do
         local function Update()
-            local version = 0.14
+            local version = 0.15
             local file_name = "ShaunPrediction.lua"
             local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/ShaunPrediction.lua"
             
@@ -587,6 +676,8 @@ if not _G.ShaunPredictionInitialized then
         pred_category = menu:add_category("Shaun Prediction")
     end
 
+    menu_interpolationPrediction = menu:add_checkbox("Use Interpolation Prediction Formula", pred_category, 1)
+    --
     reaction_time = menu:add_subcategory("Reaction Time", pred_category)
         menu:add_label("Reaction Time - Dodge Factor", reaction_time)
         menu_reactionTime = menu:add_checkbox("Use Dodge Factor", reaction_time, 1)
