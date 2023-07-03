@@ -1,8 +1,5 @@
---[[local pred_loaded = package.loaded["ShaunPrediction"]
-if not pred_loaded then return end]]
-
 local ShaunPrediction = {}
-local menu_version = 0.15
+local menu_version = 0.16
 local menu_hitchance
 local menu_target
 local menu_output
@@ -10,10 +7,11 @@ local myHero = game.local_player
 
 --------------------------------------------------------------------------------------------------------------------------------
 
-function ShaunPrediction:new(target, ability, source)
+function ShaunPrediction:new()
     local o = {}
     setmetatable(o, self)
-    self.__index = self
+    client:set_event_callback("on_tick_always", function() self:on_tick_always() end)
+    client:set_event_callback("on_draw", function() self:on_draw() end)
     return o
 end
 
@@ -650,12 +648,71 @@ function ShaunPrediction:calculatePrediction(target, ability, source)
     }
 end
 
+function ShaunPrediction:on_tick_always()
+    local useVirtual = menu:get_value(menu_virtualize) == 1
+    if useVirtual then
+        local virtual_text = game:world_to_screen(myHero.origin.x, myHero.origin.y, myHero.origin.z)
+        renderer:draw_text_centered(virtual_text.x, virtual_text.y + 80, "Virtual Prediction Enabled!")
+
+        local useInterpolation = menu:get_value(menu_interpolationPrediction) == 1
+        local predictedPosition
+        local hitChance
+        local vRange = menu:get_value(menu_range)
+        local vSpeed = menu:get_value(menu_speed)
+        local vRadius = menu:get_value(menu_radius)
+
+        for _, enemy in ipairs(game.players) do
+            if enemy.is_enemy and enemy.is_alive and enemy:distance_to(myHero.origin) <= vRange then
+
+                local vTable = {
+                    source = myHero, 
+                    speed = math.huge, 
+                    range = vRange, 
+                    delay = enemy:distance_to(myHero.origin) / vSpeed, 
+                    radius = vRadius, 
+                    collision = {}, 
+                    type = "linear", 
+                    hitbox = true
+                }
+
+                if not useInterpolation then
+                    predictedPosition = self:calculatePredictedPosition(enemy, vTable, myHero)
+                else
+                    predictedPosition = self:calculateInterpolationPredictedPosition(enemy, vTable, myHero)
+                end
+
+                if predictedPosition then
+                    menu_target = enemy.origin
+                    menu_output = predictedPosition
+                    hitChance = self:calculateHitChance(enemy, vTable, myHero, predictedPosition)
+                    if hitChance then
+                        menu_hitchance = hitChance
+                    end
+                end
+            end
+        end
+    end
+end
+
+function ShaunPrediction:on_draw()
+    if menu:get_value(draw_hitchance) == 1 and menu_target and menu_hitchance then
+        local text = game:world_to_screen(menu_target.x, menu_target.y, menu_target.z)
+        renderer:draw_text_centered(text.x, text.y + 50, tostring(menu_hitchance))
+        menu_hitchance = nil
+    end
+
+    if menu:get_value(draw_output) == 1 and menu_output then
+        renderer:draw_circle(menu_output.x, menu_output.y, menu_output.z, 30, 255, 255, 255, 255)
+        menu_output = nil
+    end
+end
+
 --------------------------------------------------------------------------------------------------------------------------------
 
 if not _G.ShaunPredictionInitialized then
     do
         local function Update()
-            local version = 0.15
+            local version = 0.16
             local file_name = "ShaunPrediction.lua"
             local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/ShaunPrediction.lua"
             
@@ -710,103 +767,13 @@ if not _G.ShaunPredictionInitialized then
         menu_range = menu:add_slider("Range Input", virtualize_prediction, 0, 4000, 2000)
         menu_radius = menu:add_slider("Radius Input", virtualize_prediction, 0, 1000, 60)
     --
-    draw_debug = menu:add_subcategory("Debug Draws", pred_category)
+    draw_debug = menu:add_subcategory("Prediction Output Draws", pred_category)
         draw_hitchance = menu:add_checkbox("Draw Hit Chance On Target", draw_debug, 1)
         draw_output = menu:add_checkbox("Draw Calculated Vec3 Output", draw_debug, 1)
     --
     menu:add_label("Version "..tostring(menu_version), pred_category)
 end
 
-function on_draw()
-    if menu:get_value(draw_hitchance) == 1 and menu_target and menu_hitchance then
-        local text = game:world_to_screen(menu_target.x, menu_target.y, menu_target.z)
-        renderer:draw_text_centered(text.x, text.y + 50, tostring(menu_hitchance))
-        menu_hitchance = nil
-    end
-
-    if menu:get_value(draw_output) == 1 and menu_output then
-        renderer:draw_circle(menu_output.x, menu_output.y, menu_output.z, 30, 255, 255, 255, 255)
-        menu_output = nil
-    end
-
-    local useVirtual = menu:get_value(menu_virtualize) == 1
-    if useVirtual then
-        local virtual_text = game:world_to_screen(myHero.origin.x, myHero.origin.y, myHero.origin.z)
-        renderer:draw_text_centered(virtual_text.x, virtual_text.y, "Virtual Prediction Enabled!")
-
-        local useInterpolation = menu:get_value(menu_interpolationPrediction) == 1
-        local predictedPosition
-        local hitChance
-        local vRange = menu:get_value(menu_range)
-        local vSpeed = menu:get_value(menu_speed)
-        local vRadius = menu:get_value(menu_radius)
-
-        for _, enemy in ipairs(game.players) do
-            if enemy.is_enemy and enemy.is_alive and enemy:get_distance(myHero.origin) <= vRange then
-
-                local vTable = {
-                    source = myHero, 
-                    speed = math.huge, 
-                    range = vRange, 
-                    delay = enemy:get_distance(myHero.origin) / vSpeed, 
-                    radius = vRadius, 
-                    collision = {}, 
-                    type = "linear", 
-                    hitbox = true
-                }
-
-                if not useInterpolation then
-                    predictedPosition = self:calculatePredictedPosition(enemy, vTable, myHero)
-                else
-                    predictedPosition = self:calculateInterpolationPredictedPosition(enemy, vTable, myHero)
-                end
-
-                if predictedPosition then
-                    menu_target = enemy
-                    menu_output = predictedPosition
-                    hitChance = self:calculateHitChance(enemy, vTable, myHero, predictedPosition)
-                    if hitChance then
-                        menu_hitchance = hitChance
-                    end
-                end
-            end
-        end
-    end
-end
-
-averageClickSpeed = {}
-local clickTimestamps = {}
-local clickSpeedSamples = 10
-
-function on_new_path(obj, path)
-    if obj.is_enemy and obj.is_hero then
-        local targetId = obj.object_id
-
-        if not clickTimestamps[targetId] then
-            clickTimestamps[targetId] = {}
-        end
-
-        -- Get click timestamps and maintain the last `clickSpeedSamples` samples
-        local currentTime = os.clock()
-        table.insert(clickTimestamps[targetId], currentTime)
-        if #clickTimestamps[targetId] > clickSpeedSamples then
-            table.remove(clickTimestamps[targetId], 1)
-        end
-
-        -- Average click speed for the target
-        if #clickTimestamps[targetId] > 1 then
-            local timeDiffSum = 0
-            for i = 2, #clickTimestamps[targetId] do
-                timeDiffSum = timeDiffSum + (clickTimestamps[targetId][i] - clickTimestamps[targetId][i - 1])
-            end
-            averageClickSpeed[targetId] = timeDiffSum / (#clickTimestamps[targetId] - 1)
-        else
-            averageClickSpeed[targetId] = 0
-        end
-    end
-end
-
 require "Prediction"
-client:set_event_callback("on_new_path", on_new_path)
-client:set_event_callback("on_draw", on_draw)
+ShaunPrediction:new()
 return ShaunPrediction
