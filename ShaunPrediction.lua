@@ -1,11 +1,12 @@
-local pred_loaded = package.loaded["ShaunPrediction"]
-if not pred_loaded then return end
+--[[local pred_loaded = package.loaded["ShaunPrediction"]
+if not pred_loaded then return end]]
 
 local ShaunPrediction = {}
 local menu_version = 0.15
 local menu_hitchance
 local menu_target
 local menu_output
+local myHero = game.local_player
 
 --------------------------------------------------------------------------------------------------------------------------------
 
@@ -608,11 +609,15 @@ end
 
 function ShaunPrediction:calculatePrediction(target, ability, source)
     local useInterpolationPred = menu:get_value(menu_interpolationPrediction) == 1
+    local useVirtual = menu:get_value(menu_virtualize) == 1
+    
     local predictedPosition
-    if not useInterpolationPred then
-        predictedPosition = self:calculatePredictedPosition(target, ability, source)
-    else
-        predictedPosition = self:calculateInterpolationPredictedPosition(target, ability, source)
+    if not useVirtual then 
+        if not useInterpolationPred then
+            predictedPosition = self:calculatePredictedPosition(target, ability, source)
+        else
+            predictedPosition = self:calculateInterpolationPredictedPosition(target, ability, source)
+        end
     end
 
     if not predictedPosition then
@@ -629,12 +634,16 @@ function ShaunPrediction:calculatePrediction(target, ability, source)
         end
     end
 
-    local hitChance = self:calculateHitChance(target, ability, source, predictedPosition)
+    local hitChance
+    if not useVirtual then 
+        hitChance = self:calculateHitChance(target, ability, source, predictedPosition)
+    end
+
     if hitChance == nil then
         return nil
     end
-
     menu_hitchance = hitChance
+
     return {
         castPos = predictedPosition,
         hitChance = hitChance,
@@ -694,6 +703,13 @@ if not _G.ShaunPredictionInitialized then
         menu_medium = menu:add_slider("Medium Stability Count", hitchance_stability, 0, 20, 4)
         menu_slow = menu:add_slider("Slow Stability Count", hitchance_stability, 0, 20, 6)
     --
+    virtualize_prediction = menu:add_subcategory("Virtualize Prediction", pred_category)
+        menu_virtualize = menu:add_checkbox("Enable Virtualize Prediction", virtualize_prediction, 0)
+        menu:add_label("Virtualize On Targets Within Range", virtualize_prediction)
+        menu_speed = menu:add_slider("Speed Input", virtualize_prediction, 0, 6000, 2000)
+        menu_range = menu:add_slider("Range Input", virtualize_prediction, 0, 4000, 2000)
+        menu_radius = menu:add_slider("Radius Input", virtualize_prediction, 0, 1000, 60)
+    --
     draw_debug = menu:add_subcategory("Debug Draws", pred_category)
         draw_hitchance = menu:add_checkbox("Draw Hit Chance On Target", draw_debug, 1)
         draw_output = menu:add_checkbox("Draw Calculated Vec3 Output", draw_debug, 1)
@@ -711,6 +727,50 @@ function on_draw()
     if menu:get_value(draw_output) == 1 and menu_output then
         renderer:draw_circle(menu_output.x, menu_output.y, menu_output.z, 30, 255, 255, 255, 255)
         menu_output = nil
+    end
+
+    local useVirtual = menu:get_value(menu_virtualize) == 1
+    if useVirtual then
+        local virtual_text = game:world_to_screen(myHero.origin.x, myHero.origin.y, myHero.origin.z)
+        renderer:draw_text_centered(virtual_text.x, virtual_text.y, "Virtual Prediction Enabled!")
+
+        local useInterpolation = menu:get_value(menu_interpolationPrediction) == 1
+        local predictedPosition
+        local hitChance
+        local vRange = menu:get_value(menu_range)
+        local vSpeed = menu:get_value(menu_speed)
+        local vRadius = menu:get_value(menu_radius)
+
+        for _, enemy in ipairs(game.players) do
+            if enemy.is_enemy and enemy.is_alive and enemy:get_distance(myHero.origin) <= vRange then
+
+                local vTable = {
+                    source = myHero, 
+                    speed = math.huge, 
+                    range = vRange, 
+                    delay = enemy:get_distance(myHero.origin) / vSpeed, 
+                    radius = vRadius, 
+                    collision = {}, 
+                    type = "linear", 
+                    hitbox = true
+                }
+
+                if not useInterpolation then
+                    predictedPosition = self:calculatePredictedPosition(enemy, vTable, myHero)
+                else
+                    predictedPosition = self:calculateInterpolationPredictedPosition(enemy, vTable, myHero)
+                end
+
+                if predictedPosition then
+                    menu_target = enemy
+                    menu_output = predictedPosition
+                    hitChance = self:calculateHitChance(enemy, vTable, myHero, predictedPosition)
+                    if hitChance then
+                        menu_hitchance = hitChance
+                    end
+                end
+            end
+        end
     end
 end
 
