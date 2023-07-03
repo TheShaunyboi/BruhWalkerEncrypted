@@ -1,7 +1,7 @@
 local UpdateDraw = false
 do
   	local function AutoUpdate()
-		local Version = 2.9
+		local Version = 3.1
 		local file_name = "Shaunyboi-RandomUtilities.lua"
 		local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-RandomUtilities.lua"
 		
@@ -327,6 +327,7 @@ random_no_vision_control = menu:add_checkbox("Use [Control Ward] On Vision Lost"
 ping_vision = menu:add_subcategory("[Auto Ping Vision]", random_category)
 auto_ping_vision = menu:add_checkbox("Use [WARD HERE] Ping On New Enemy Wards", ping_vision, 1)
 ward_ping_close = menu:add_checkbox("Use [WARD HERE] Ping When Ally Is Close To Ward", ping_vision, 1)
+ping_ward_onscreen = menu:add_checkbox("Only Ping IF [WARD] is On Screen", ping_vision, 1)
 
 invul_buff_settings = menu:add_subcategory("[Invulnerable Countdown Draw]", random_category)
 invul_buff_draw = menu:add_checkbox("Use Draw Invulnerable Countdown", invul_buff_settings, 1)
@@ -655,9 +656,11 @@ local function Ward_Ping_Close()
 		wards = game.wards
 		for _, ward in ipairs(wards) do
 			if ward ~= ward_store and game.game_time > ping_time and ward.is_ward and ward.is_enemy and GetAllyCountCicular(1000, ward) >= 1 and myHero:distance_to(ward.origin) <= 2500 then
-				game:send_ping(ward.origin.x, ward.origin.y, ward.origin.z, PING_VISION)
-				ward_store = ward
-				ping_time = game.game_time + 10
+                if (ward.is_on_screen or menu:get_value(ping_ward_onscreen) == 0) then
+                    game:send_ping(ward.origin.x, ward.origin.y, ward.origin.z, PING_VISION)
+                    ward_store = ward
+                    ping_time = game.game_time + 10
+                end
 			end
 		end
 	end
@@ -668,7 +671,7 @@ local current_time = nil
 local ward_pos = nil
 local function on_object_created(obj, obj_name)
 	if menu:get_value(auto_ping_vision) == 1 then
-		if obj.is_ward and obj.is_enemy and GetAllyCountCicular(1000, obj) == 0 then
+		if obj.is_ward and obj.is_enemy and GetAllyCountCicular(1000, obj) == 0 and (obj.is_on_screen or menu:get_value(ping_ward_onscreen) == 0) then
 			if obj:distance_to(myHero.origin) <= 2500 then
 				current_time = game.game_time
 				ward_pos = obj
