@@ -1,5 +1,5 @@
 local ShaunPrediction = {}
-local menu_version = 0.17
+local menu_version = 0.18
 local menu_hitchance
 local menu_target
 local menu_output
@@ -269,69 +269,62 @@ end
 
 --------------------------------------------------------------------------------------------------------------------------------
 
-function ShaunPrediction:calculateHitChance(target, ability, source, predictedPosition)
-    local targetPos = vec3.new(target.origin.x, target.origin.y, target.origin.z)
-    local myHeroPos = vec3.new(source.origin.x, source.origin.y, source.origin.y)
+function ShaunPrediction:GetBestAOE(input, units, star)
+    if not input or not units or #units == 0 then
+        return nil
+    end
     
-    -- Calculate hit chance
-    local distanceToTarget = source:distance_to(targetPos)
-    local timeToHit = distanceToTarget / ability.speed
-    local baseHitChance = math.max(0, 1 - timeToHit)
+    local bestPosition = nil
+    local highestHitCount = 0
+    
+    for i, unit in ipairs(units) do
+        local position = vec3.new(unit.origin.x, unit.origin.y, unit.origin.z)
+        local hitCount = 0
 
-    -- Adjust for movement speed
-    local targetMovementSpeed = target.move_speed
-    local speedFactor = math.max(1 - targetMovementSpeed / 900, 0.5) -- decrease hit chance based on target's movement speed
-    baseHitChance = baseHitChance * speedFactor
-
-    -- Adjust for CC
-    local isCCed = target:get_immobile_duration(false)
-    if isCCed then
-        local ccBonus = 0.1 -- increase hit chance if target is CCed
-        baseHitChance = baseHitChance + ccBonus
-    end
-
-    -- Adjust hit chance based on whether the target is auto-attacking
-    if target.is_auto_attacking then
-        local autoAttackBonus = 0.1 -- adjust value as needed
-        baseHitChance = baseHitChance + autoAttackBonus
-    end
-
-    if next(ability.collision) ~= nil then
-        local collisionPredPos = _G.Prediction:get_collision(ability, predictedPosition, target)
-        local collisionEnemy = _G.Prediction:get_collision(ability, targetPos, target)
-        if next(collisionPredPos) ~= nil or next(collisionEnemy) ~= nil then
-            return nil
-        end
-    end
-
-    -- Adjust hit chance based on collision and bounding radius
-    local totalRadius
-    if ability.type == "circular" or ability.type == "linear" then
-        totalRadius = target.bounding_radius + ability.radius
-
-    elseif ability.type == "cone" then
-        totalRadius = target.bounding_radius + math.tan(math.rad(ability.angle / 2)) * distanceToTarget
-    end
-
-    -- Decrease hit chance if target is near enemy minions
-    local enemyMinions = self:GetEnemyMinions(targetPos, ability.range)
-    for _, minion in ipairs(enemyMinions) do
-        if minion then
-            local distanceToMinion = minion:distance_to(predictedPosition)
-            if distanceToMinion < totalRadius then
-                baseHitChance = baseHitChance * 0.5
-                break
+        if star then
+            local distanceToStar = self:GetDistanceSqr2(position, vec3.new(star.origin.x, star.origin.y, star.origin.z))
+            if distanceToStar <= input.range * input.range then
+                hitCount = hitCount + 1
             end
         end
+
+        if input.type == "linear" then
+            local predictedPosition = self:calculatePredictedPosition(unit, input, star or unit)
+            for j, unit2 in ipairs(units) do
+                local position2 = vec3.new(unit2.origin.x, unit2.origin.y, unit2.origin.z)
+                if self:IsPointOnLineSegment(position, predictedPosition, position2, input.radius) then
+                    hitCount = hitCount + 1
+                end
+            end
+
+        elseif input.type == "circular" then
+            for j, unit2 in ipairs(units) do
+                local position2 = vec3.new(unit2.origin.x, unit2.origin.y, unit2.origin.z)
+                local distanceToUnit = self:GetDistanceSqr2(position, position2)
+                if distanceToUnit <= input.radius * input.radius then
+                    hitCount = hitCount + 1
+                end
+            end
+
+        elseif input.type == "cone" then
+            local predictedPosition = self:calculatePredictedPosition(unit, input, star or unit)
+            for j, unit2 in ipairs(units) do
+                local position2 = vec3.new(unit2.origin.x, unit2.origin.y, unit2.origin.z)
+                if self:IsPointInCone(position, predictedPosition, input.angle, input.range, position2) then
+                    hitCount = hitCount + 1
+                end
+            end
+        end
+ 
+        if hitCount > highestHitCount then
+            bestPosition = position
+            highestHitCount = hitCount
+        end
     end
 
-
-    local distanceDifference = math.abs(self:GetDistanceSqr2(myHeroPos, predictedPosition) - self:GetDistanceSqr2(myHeroPos, targetPos))
-    if distanceDifference <= totalRadius * totalRadius then
-        baseHitChance = baseHitChance * 1.1
-    end
-
-    return baseHitChance
+    return {position = bestPosition, 
+        hit_count = highestHitCount
+    }
 end
 
 --------------------------------------------------------------------------------------------------------------------------------
@@ -458,6 +451,8 @@ function ShaunPrediction:calculatePredictedPosition(target, ability, source)
     return predictedPosition
 end
 
+--------------------------------------------------------------------------------------------------------------------------------
+
 function ShaunPrediction:calculateInterpolationPredictedPosition(target, ability, source)
     local targetPos = vec3.new(target.origin.x, target.origin.y, target.origin.z)
     local myHeroPos = vec3.new(source.origin.x, source.origin.y, source.origin.z)
@@ -545,62 +540,117 @@ end
 
 --------------------------------------------------------------------------------------------------------------------------------
 
-function ShaunPrediction:GetBestAOE(input, units, star)
-    if not input or not units or #units == 0 then
-        return nil
-    end
+function ShaunPrediction:calculateHitChance(target, ability, source, predictedPosition)
+    local targetPos = vec3.new(target.origin.x, target.origin.y, target.origin.z)
+    local myHeroPos = vec3.new(source.origin.x, source.origin.y, source.origin.y)
     
-    local bestPosition = nil
-    local highestHitCount = 0
-    
-    for i, unit in ipairs(units) do
-        local position = vec3.new(unit.origin.x, unit.origin.y, unit.origin.z)
-        local hitCount = 0
+    -- Calculate hit chance
+    local distanceToTarget = source:distance_to(targetPos)
+    local timeToHit = distanceToTarget / ability.speed
+    local baseHitChance = math.max(0, 1 - timeToHit)
 
-        if star then
-            local distanceToStar = self:GetDistanceSqr2(position, vec3.new(star.origin.x, star.origin.y, star.origin.z))
-            if distanceToStar <= input.range * input.range then
-                hitCount = hitCount + 1
-            end
-        end
+    -- Adjust for movement speed
+    local targetMovementSpeed = target.move_speed
+    local speedFactor = math.max(1 - targetMovementSpeed / 900, 0.5) -- decrease hit chance based on target's movement speed
+    baseHitChance = baseHitChance * speedFactor
 
-        if input.type == "linear" then
-            local predictedPosition = self:calculatePredictedPosition(unit, input, star or unit)
-            for j, unit2 in ipairs(units) do
-                local position2 = vec3.new(unit2.origin.x, unit2.origin.y, unit2.origin.z)
-                if self:IsPointOnLineSegment(position, predictedPosition, position2, input.radius) then
-                    hitCount = hitCount + 1
-                end
-            end
-
-        elseif input.type == "circular" then
-            for j, unit2 in ipairs(units) do
-                local position2 = vec3.new(unit2.origin.x, unit2.origin.y, unit2.origin.z)
-                local distanceToUnit = self:GetDistanceSqr2(position, position2)
-                if distanceToUnit <= input.radius * input.radius then
-                    hitCount = hitCount + 1
-                end
-            end
-
-        elseif input.type == "cone" then
-            local predictedPosition = self:calculatePredictedPosition(unit, input, star or unit)
-            for j, unit2 in ipairs(units) do
-                local position2 = vec3.new(unit2.origin.x, unit2.origin.y, unit2.origin.z)
-                if self:IsPointInCone(position, predictedPosition, input.angle, input.range, position2) then
-                    hitCount = hitCount + 1
-                end
-            end
-        end
- 
-        if hitCount > highestHitCount then
-            bestPosition = position
-            highestHitCount = hitCount
-        end
+    -- Adjust for CC
+    local isCCed = target:get_immobile_duration(false)
+    if isCCed then
+        local ccBonus = 0.1 -- increase hit chance if target is CCed
+        baseHitChance = baseHitChance + ccBonus
     end
 
-    return {position = bestPosition, 
-        hit_count = highestHitCount
-    }
+    -- Adjust hit chance based on whether the target is auto-attacking
+    if target.is_auto_attacking then
+        local autoAttackBonus = 0.1 -- adjust value as needed
+        baseHitChance = baseHitChance + autoAttackBonus
+    end
+    
+
+    if next(ability.collision) ~= nil then
+        local collisionPredPos = _G.Prediction:get_collision(ability, predictedPosition, target)
+        local collisionEnemy = _G.Prediction:get_collision(ability, targetPos, target)
+        if next(collisionPredPos) ~= nil or next(collisionEnemy) ~= nil then
+            return nil
+        end
+
+        local cTable = {}
+        if ability.type == "linear" then
+            cTable = {
+                type = "linear",
+                delay = ability.delay,
+                speed = ability.speed,
+                range = ability.range,
+                width = ability.radius * 2,
+                collision = {
+                    ["Wall"] = true,
+                    ["Hero"] = false,
+                    ["Minion"] = true
+                },
+            }
+        elseif ability.type == "circular" then
+            cTable = {
+                type = "circular",
+                delay = ability.delay,
+                speed = ability.speed,
+                range = ability.range,
+                radius = ability.radius,
+                collision = {
+                    ["Wall"] = true,
+                    ["Hero"] = false,
+                    ["Minion"] = true
+                },
+            }
+        elseif ability.type == "cone" then
+            cTable = {
+                type = "cone",
+                delay = ability.delay,
+                speed = ability.speed,
+                range = ability.range,
+                angle = ability.angle,
+                collision = {
+                    ["Wall"] = true,
+                    ["Hero"] = false,
+                    ["Minion"] = true
+                },
+            }
+        end
+
+        local colPred = _G.DreamPred.GetPrediction(target, cTable, myHero)
+        if not colPred or colPred.hitChance < 0.25 then
+            return nil
+        end
+    end
+
+    -- Adjust hit chance based on collision and bounding radius
+    local totalRadius
+    if ability.type == "circular" or ability.type == "linear" then
+        totalRadius = target.bounding_radius + ability.radius
+
+    elseif ability.type == "cone" then
+        totalRadius = target.bounding_radius + math.tan(math.rad(ability.angle / 2)) * distanceToTarget
+    end
+
+    -- Decrease hit chance if target is near enemy minions
+    local enemyMinions = self:GetEnemyMinions(targetPos, ability.range)
+    for _, minion in ipairs(enemyMinions) do
+        if minion then
+            local distanceToMinion = minion:distance_to(predictedPosition)
+            if distanceToMinion < totalRadius then
+                baseHitChance = baseHitChance * 0.5
+                break
+            end
+        end
+    end
+
+
+    local distanceDifference = math.abs(self:GetDistanceSqr2(myHeroPos, predictedPosition) - self:GetDistanceSqr2(myHeroPos, targetPos))
+    if distanceDifference <= totalRadius * totalRadius then
+        baseHitChance = baseHitChance * 1.1
+    end
+
+    return baseHitChance
 end
 
 --------------------------------------------------------------------------------------------------------------------------------
@@ -648,6 +698,8 @@ function ShaunPrediction:calculatePrediction(target, ability, source)
     }
 end
 
+--------------------------------------------------------------------------------------------------------------------------------
+
 function ShaunPrediction:on_tick_always()
     local useVirtual = menu:get_value(menu_virtualize) == 1
     if useVirtual then
@@ -694,6 +746,53 @@ function ShaunPrediction:on_tick_always()
     end
 end
 
+--------------------------------------------------------------------------------------------------------------------------------
+
+function ShaunPrediction:onDash(target, ability, source)
+    local targetPos = vec3.new(target.origin.x, target.origin.y, target.origin.z)
+    local myHeroPos = vec3.new(source.origin.x, source.origin.y, source.origin.z)
+    
+    local distanceToTarget = self:GetDistanceSqr2(targetPos, myHeroPos)
+    if distanceToTarget > ability.range then
+        return nil
+    end
+
+    local targetPath = target.path
+    if not targetPath.is_dashing then
+        return nil
+    end
+
+    local dashSpeed = targetPath.dash_speed
+    local dashPos = vec3.new(targetPath.dash_pos.x, targetPath.dash_pos.y, targetPath.dash_pos.z)
+
+    if next(ability.collision) ~= nil then
+        local collisionPredPos = _G.Prediction:get_collision(ability, dashPos, target)
+        local collisionEnemy = _G.Prediction:get_collision(ability, targetPos, target)
+        if next(collisionPredPos) ~= nil or next(collisionEnemy) ~= nil then
+            return nil
+        end
+    end
+    
+    local travelTime = self:GetDistanceSqr2(myHeroPos, dashPos) / ability.speed
+    local timeToDash = self:GetDistanceSqr2(targetPos, dashPos) / dashSpeed
+    local remainingTime = timeToDash - travelTime
+
+    remainingTime = remainingTime - ability.delay
+    remainingTime = remainingTime - 0.0167
+
+    local castThreshold = 0.2
+    if remainingTime >= 0 and remainingTime <= castThreshold then
+
+        return {
+            castPos = dashPos,
+            remainingTime = remainingTime
+        }
+    end
+    return nil
+end
+
+--------------------------------------------------------------------------------------------------------------------------------
+
 function ShaunPrediction:on_draw()
     local useVirtual = menu:get_value(menu_virtualize) == 1
 
@@ -714,7 +813,7 @@ end
 if not _G.ShaunPredictionInitialized then
     do
         local function Update()
-            local version = 0.17
+            local version = 0.18
             local file_name = "ShaunPrediction.lua"
             local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/ShaunPrediction.lua"
             
@@ -777,5 +876,6 @@ if not _G.ShaunPredictionInitialized then
 end
 
 require "Prediction"
+require "DreamPred"
 ShaunPrediction:new()
 return ShaunPrediction
