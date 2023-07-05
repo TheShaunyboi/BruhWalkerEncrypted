@@ -1,5 +1,5 @@
 local ShaunPrediction = {}
-local menu_version = 0.18
+local menu_version = 0.19
 local menu_hitchance
 local menu_target
 local menu_output
@@ -182,11 +182,6 @@ end
 
 --------------------------------------------------------------------------------------------------------------------------------
 
-function ShaunPrediction:calculateDodgeFactor(clickFrequency)
-    local maxDodgeFactor = 0.3 -- maximum dodge factor
-    return maxDodgeFactor * (1 - math.exp(-clickFrequency))
-end
-
 function ShaunPrediction:invulBuff(obj)
     if not obj then return end
 
@@ -325,130 +320,6 @@ function ShaunPrediction:GetBestAOE(input, units, star)
     return {position = bestPosition, 
         hit_count = highestHitCount
     }
-end
-
---------------------------------------------------------------------------------------------------------------------------------
-
-function ShaunPrediction:getStabilityThreshold()
-    local stabilitySetting = menu:get_value(menu_stabilityThreshold)
-    local fast_count = menu:get_value(menu_fast)
-    local medium_count = menu:get_value(menu_medium)
-    local slow_count = menu:get_value(menu_slow)
-    local stabilityThreshold
-
-    if stabilitySetting == 0 then
-        stabilityThreshold = fast_count
-    elseif stabilitySetting == 1 then
-        stabilityThreshold = medium_count
-    elseif stabilitySetting == 2 then
-        stabilityThreshold = slow_count
-    end
-
-    return stabilityThreshold
-end
-
-function ShaunPrediction:stabilizeCalculation(target, ability, source, stabilityThreshold, predictedPosition)
-    local prevHitChance = 0
-    local stableCount = 0
-
-    for i = 1, stabilityThreshold do
-        local hitChance = self:calculateHitChance(target, ability, source, predictedPosition)
-
-        if not hitChance then
-            stableCount = 0
-        else
-            -- Check if the hitChance has dropped significantly
-            if prevHitChance - hitChance >= 0.2 then
-                return false
-            end
-
-            -- If hitChance is stable or increasing, increase the stableCount
-            if math.abs(hitChance - prevHitChance) <= 0.01 or hitChance > prevHitChance then
-                stableCount = stableCount + 1
-            else
-                stableCount = 0
-            end
-
-            prevHitChance = hitChance
-        end
-
-        if stableCount >= stabilityThreshold then
-            return true
-        end
-    end
-
-    return false
-end
-
---------------------------------------------------------------------------------------------------------------------------------
-
-function ShaunPrediction:calculatePredictedPosition(target, ability, source)
-    local targetPos = vec3.new(target.origin.x, target.origin.y, target.origin.z)
-    local myHeroPos = vec3.new(source.origin.x, source.origin.y, source.origin.z)
-    local distanceToTarget = self:GetDistanceSqr2(targetPos, myHeroPos)
-
-    if distanceToTarget > ability.range then
-        return nil
-    end
-
-    local targetPath = target.path
-    local abilityTravelTime = ability.range / ability.speed + ability.delay
-
-    -- Calculate predicted position based on target's waypoints
-    local predictedPosition = targetPos
-    local delay = 0.0167
-    local remainingTravelTime = abilityTravelTime + delay
-
-    local targetInvul = self:invulBuff(target) 
-    if targetInvul and remainingTravelTime <= targetInvul then
-        predictedPosition = targetPos
-    end
-
-    if not targetPath.is_dashing and not targetPath.is_moving then
-        -- Target is stationary, use the actual position as the predicted position
-        predictedPosition = targetPos
-    else
-        for i = 1, #targetPath.waypoints - 1 do
-            local currentWaypoint = vec3.new(targetPath.waypoints[i].x, targetPath.waypoints[i].y, targetPath.waypoints[i].z)
-            local nextWaypoint = vec3.new(targetPath.waypoints[i + 1].x, targetPath.waypoints[i + 1].y, targetPath.waypoints[i + 1].z)
-            local waypointDistance = self:GetDistanceSqr2(currentWaypoint, nextWaypoint)
-
-            local timeToReachNextWaypoint
-            if targetPath.is_dashing then
-                timeToReachNextWaypoint = waypointDistance / targetPath.dash_speed
-            else
-                timeToReachNextWaypoint = waypointDistance / target.move_speed
-            end
-
-            if remainingTravelTime > timeToReachNextWaypoint then
-                remainingTravelTime = remainingTravelTime - timeToReachNextWaypoint
-                predictedPosition = nextWaypoint
-            else
-                if nextWaypoint and currentWaypoint then
-                    local directionToNextWaypoint = self:Sub(nextWaypoint, currentWaypoint)
-                    local moveSpeed = target.move_speed
-                    local directionToNextWaypointNormalized = self:Normalize(directionToNextWaypoint)
-                    predictedPosition = self:Add(currentWaypoint, self:Mul(directionToNextWaypointNormalized, remainingTravelTime * moveSpeed))
-                end
-                break
-            end
-        end
-
-        -- If the target has clicked far away but is still in spell range..
-        -- calculate the predicted position based on the target's movement direction and remaining travel time
-        if distanceToTarget <= ability.range and targetPath.waypoints[1] and targetPath.waypoints[2] then
-            local currentWaypoint = vec3.new(targetPath.waypoints[1].x, targetPath.waypoints[1].y, targetPath.waypoints[1].z)
-            local nextWaypoint = vec3.new(targetPath.waypoints[2].x, targetPath.waypoints[2].y, targetPath.waypoints[2].z)
-            local directionToNextWaypoint = self:Sub(nextWaypoint, currentWaypoint)
-            local moveSpeed = target.move_speed
-            local directionToNextWaypointNormalized = self:Normalize(directionToNextWaypoint)
-            local distanceToMove = self:Mul(directionToNextWaypointNormalized, remainingTravelTime * moveSpeed)
-            predictedPosition = self:Add(targetPos, distanceToMove)
-        end
-    end
-
-    menu_target = targetPos
-    return predictedPosition
 end
 
 --------------------------------------------------------------------------------------------------------------------------------
@@ -656,31 +527,17 @@ end
 --------------------------------------------------------------------------------------------------------------------------------
 
 function ShaunPrediction:calculatePrediction(target, ability, source)
-    local useInterpolationPred = menu:get_value(menu_interpolationPrediction) == 1
     local useVirtual = menu:get_value(menu_virtualize) == 1
     
     local predictedPosition
     if not useVirtual then 
-        if not useInterpolationPred then
-            predictedPosition = self:calculatePredictedPosition(target, ability, source)
-        else
-            predictedPosition = self:calculateInterpolationPredictedPosition(target, ability, source)
-        end
+        predictedPosition = self:calculateInterpolationPredictedPosition(target, ability, source)
     end
 
     if not predictedPosition then
         return nil
     end
     menu_output = predictedPosition
-
-    local stabilityThreshold
-    local useStabilityThreshold = menu:get_value(menu_enableStability) == 1
-    if useStabilityThreshold then
-        stabilityThreshold = self:getStabilityThreshold()
-        if not self:stabilizeCalculation(target, ability, source, stabilityThreshold, predictedPosition) then
-            return nil
-        end
-    end
 
     local hitChance
     if not useVirtual then 
@@ -706,7 +563,6 @@ function ShaunPrediction:on_tick_always()
         local virtual_text = game:world_to_screen(myHero.origin.x, myHero.origin.y, myHero.origin.z)
         renderer:draw_text_centered(virtual_text.x, virtual_text.y + 80, "Virtual Prediction Enabled!")
 
-        local useInterpolation = menu:get_value(menu_interpolationPrediction) == 1
         local predictedPosition
         local hitChance
         local vRange = menu:get_value(menu_range)
@@ -727,11 +583,7 @@ function ShaunPrediction:on_tick_always()
                     hitbox = true
                 }
 
-                if not useInterpolation then
-                    predictedPosition = self:calculatePredictedPosition(enemy, vTable, myHero)
-                else
-                    predictedPosition = self:calculateInterpolationPredictedPosition(enemy, vTable, myHero)
-                end
+                predictedPosition = self:calculateInterpolationPredictedPosition(enemy, vTable, myHero)
 
                 if predictedPosition then
                     menu_target = enemy.origin
@@ -813,7 +665,7 @@ end
 if not _G.ShaunPredictionInitialized then
     do
         local function Update()
-            local version = 0.18
+            local version = 0.19
             local file_name = "ShaunPrediction.lua"
             local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/ShaunPrediction.lua"
             
@@ -843,23 +695,6 @@ if not _G.ShaunPredictionInitialized then
         pred_category = menu:add_category("Shaun Prediction")
     end
 
-    menu_interpolationPrediction = menu:add_checkbox("Use Interpolation Prediction Formula", pred_category, 1)
-    --
-    reaction_time = menu:add_subcategory("Reaction Time", pred_category)
-        menu:add_label("Reaction Time - Dodge Factor", reaction_time)
-        menu_reactionTime = menu:add_checkbox("Use Dodge Factor", reaction_time, 1)
-    --
-    hitchance_stability = menu:add_subcategory("Hit Chance Settings", pred_category)
-        menu_enableStability = menu:add_checkbox("Use Hit Chance Stability [BETA]", hitchance_stability, 0)
-        menu:add_label("How Many Counts We Consider Within Stability Calculation", hitchance_stability)
-        a_table = {}
-        a_table[1] = "Fast"
-        a_table[2] = "Medium"
-        a_table[3] = "Slow"
-        menu_stabilityThreshold = menu:add_combobox("Hit Chance Stability Threshold", hitchance_stability, a_table, 2)
-        menu_fast = menu:add_slider("Fast Stability Count", hitchance_stability, 0, 20, 2)
-        menu_medium = menu:add_slider("Medium Stability Count", hitchance_stability, 0, 20, 4)
-        menu_slow = menu:add_slider("Slow Stability Count", hitchance_stability, 0, 20, 6)
     --
     virtualize_prediction = menu:add_subcategory("Virtualize Prediction", pred_category)
         menu_virtualize = menu:add_checkbox("Enable Virtualize Prediction", virtualize_prediction, 0)
