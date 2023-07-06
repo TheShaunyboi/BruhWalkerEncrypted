@@ -1,5 +1,4 @@
 local ShaunPrediction = {}
-local menu_version = 0.19
 local menu_hitchance
 local menu_target
 local menu_output
@@ -338,7 +337,15 @@ function ShaunPrediction:calculateInterpolationPredictedPosition(target, ability
 
     -- Calculate predicted position based on target's waypoints
     local predictedPosition = targetPos
-    local delay = 0.0167
+
+    local usePing = menu:get_value(menu_latency) == 1
+    local delay
+    if usePing then 
+        delay = 0.0167 + game.latency
+    else
+        delay = 0.0167
+    end
+
     local remainingTravelTime = abilityTravelTime + delay
 
     local targetInvul = self:invulBuff(target) 
@@ -662,10 +669,11 @@ end
 
 --------------------------------------------------------------------------------------------------------------------------------
 
+local menu_version = 0.20
 if not _G.ShaunPredictionInitialized then
     do
         local function Update()
-            local version = 0.19
+            local version = menu_version
             local file_name = "ShaunPrediction.lua"
             local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/ShaunPrediction.lua"
             
@@ -694,7 +702,9 @@ if not _G.ShaunPredictionInitialized then
         http:download_file_async("https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Common/Logo.png", "Shaun's Sexy Common//Logo.png", function() end)
         pred_category = menu:add_category("Shaun Prediction")
     end
-
+    --
+    ping = menu:add_subcategory("Latency", pred_category)
+        menu_latency = menu:add_checkbox("Always Account For Latency", ping, 1)
     --
     virtualize_prediction = menu:add_subcategory("Virtualize Prediction", pred_category)
         menu_virtualize = menu:add_checkbox("Enable Virtualize Prediction", virtualize_prediction, 0)
