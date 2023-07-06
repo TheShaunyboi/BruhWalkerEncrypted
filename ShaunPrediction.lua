@@ -669,7 +669,7 @@ end
 
 --------------------------------------------------------------------------------------------------------------------------------
 
-local menu_version = 0.20
+local menu_version = 0.21
 if not _G.ShaunPredictionInitialized then
     do
         local function Update()
