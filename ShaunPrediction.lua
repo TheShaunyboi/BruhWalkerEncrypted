@@ -669,11 +669,11 @@ end
 
 --------------------------------------------------------------------------------------------------------------------------------
 
-local menu_version = 0.21
+local menu_version = 0.22
 if not _G.ShaunPredictionInitialized then
     do
         local function Update()
-            local version = menu_version
+            local version = 0.22
             local file_name = "ShaunPrediction.lua"
             local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/ShaunPrediction.lua"
             
