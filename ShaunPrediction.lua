@@ -412,6 +412,13 @@ function ShaunPrediction:calculateInterpolationPredictedPosition(target, ability
         end
     end
 
+    -- Check if the predicted position is outside the maximum spell range
+    local distanceToPredicted = self:GetDistanceSqr2(predictedPosition, myHeroPos)
+    local totalRange = ability.range + target.bounding_radius
+    if distanceToPredicted > totalRange then
+        return nil
+    end
+
     menu_target = targetPos
     return predictedPosition
 end
@@ -444,7 +451,6 @@ function ShaunPrediction:calculateHitChance(target, ability, source, predictedPo
         local autoAttackBonus = 0.1 -- adjust value as needed
         baseHitChance = baseHitChance + autoAttackBonus
     end
-    
 
     if next(ability.collision) ~= nil then
         local collisionPredPos = _G.Prediction:get_collision(ability, predictedPosition, target)
@@ -669,11 +675,11 @@ end
 
 --------------------------------------------------------------------------------------------------------------------------------
 
-local menu_version = 0.22
+local menu_version = 0.23
 if not _G.ShaunPredictionInitialized then
     do
         local function Update()
-            local version = 0.22
+            local version = 0.23
             local file_name = "ShaunPrediction.lua"
             local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/ShaunPrediction.lua"
             
