@@ -459,6 +459,11 @@ function ShaunPrediction:calculateHitChance(target, ability, source, predictedPo
             return nil
         end
 
+        local cCheck = _G.Prediction:get_prediction(ability, target) 
+        if cCheck.hit_chance < 0.5 then
+            return nil
+        end
+
         local cTable = {}
         if ability.type == "linear" then
             cTable = {
@@ -502,7 +507,11 @@ function ShaunPrediction:calculateHitChance(target, ability, source, predictedPo
         end
 
         local colPred = _G.DreamPred.GetPrediction(target, cTable, myHero)
-        if not colPred or colPred.hitChance < 0.25 then
+        if not colPred then
+            return nil
+        end
+
+        if colPred.hitChance < 0.5 then
             return nil
         end
     end
@@ -675,11 +684,11 @@ end
 
 --------------------------------------------------------------------------------------------------------------------------------
 
-local menu_version = 0.23
+local menu_version = 0.24
 if not _G.ShaunPredictionInitialized then
     do
         local function Update()
-            local version = 0.23
+            local version = 0.24
             local file_name = "ShaunPrediction.lua"
             local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/ShaunPrediction.lua"
             
