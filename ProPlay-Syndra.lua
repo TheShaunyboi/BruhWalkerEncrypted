@@ -13,7 +13,7 @@ function Syndra:new()
 end
 
 function Syndra:init()
-    local LuaVersion = 0.5
+    local LuaVersion = 0.6
 	local LuaName = "ProPlay-Syndra"
 	local lua_file_name = "ProPlay-Syndra.lua"
 	local lua_url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/ProPlay-Syndra.lua"
@@ -243,7 +243,7 @@ function Syndra:inList(tab, val)
 end
 
 function Syndra:on_object_created(obj, obj_name)
-	if obj.champ_name == "SyndraSphere" then
+	if obj_name == "Seed" then
 		if not self:inList(self.ballHolder, obj) then
 			table.insert(self.ballHolder, obj)
 		end
