@@ -460,7 +460,7 @@ function ShaunPrediction:calculateHitChance(target, ability, source, predictedPo
         end
 
         local cCheck = _G.Prediction:get_prediction(ability, target) 
-        if cCheck.hit_chance < 0.5 then
+        if cCheck.hit_chance < 0.35 then
             return nil
         end
 
@@ -511,7 +511,7 @@ function ShaunPrediction:calculateHitChance(target, ability, source, predictedPo
             return nil
         end
 
-        if colPred.hitChance < 0.5 then
+        if colPred.hitChance < 0.35 then
             return nil
         end
     end
@@ -684,11 +684,11 @@ end
 
 --------------------------------------------------------------------------------------------------------------------------------
 
-local menu_version = 0.24
+local menu_version = 0.25
 if not _G.ShaunPredictionInitialized then
     do
         local function Update()
-            local version = 0.24
+            local version = 0.25
             local file_name = "ShaunPrediction.lua"
             local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/ShaunPrediction.lua"
             
