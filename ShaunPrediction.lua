@@ -459,55 +459,60 @@ function ShaunPrediction:calculateHitChance(target, ability, source, predictedPo
             return nil
         end
 
-        local cTable = {}
-        if ability.type == "linear" then
-            cTable = {
-                type = "linear",
-                delay = ability.delay,
-                speed = ability.speed,
-                range = ability.range,
-                width = ability.radius * 2,
-                collision = {
-                    ["Wall"] = true,
-                    ["Hero"] = false,
-                    ["Minion"] = true
-                },
-            }
-        elseif ability.type == "circular" then
-            cTable = {
-                type = "circular",
-                delay = ability.delay,
-                speed = ability.speed,
-                range = ability.range,
-                radius = ability.radius,
-                collision = {
-                    ["Wall"] = true,
-                    ["Hero"] = false,
-                    ["Minion"] = true
-                },
-            }
-        elseif ability.type == "cone" then
-            cTable = {
-                type = "cone",
-                delay = ability.delay,
-                speed = ability.speed,
-                range = ability.range,
-                angle = ability.angle,
-                collision = {
-                    ["Wall"] = true,
-                    ["Hero"] = false,
-                    ["Minion"] = true
-                },
-            }
-        end
+        for _, collisionType in ipairs(ability.collision) do
+            if collisionType == "minion" then
+                
+                local cTable = {}
+                if ability.type == "linear" then
+                    cTable = {
+                        type = "linear",
+                        delay = ability.delay,
+                        speed = ability.speed,
+                        range = ability.range,
+                        width = ability.radius * 2,
+                        collision = {
+                            ["Wall"] = true,
+                            ["Hero"] = false,
+                            ["Minion"] = true
+                        },
+                    }
+                elseif ability.type == "circular" then
+                    cTable = {
+                        type = "circular",
+                        delay = ability.delay,
+                        speed = ability.speed,
+                        range = ability.range,
+                        radius = ability.radius,
+                        collision = {
+                            ["Wall"] = true,
+                            ["Hero"] = false,
+                            ["Minion"] = true
+                        },
+                    }
+                elseif ability.type == "cone" then
+                    cTable = {
+                        type = "cone",
+                        delay = ability.delay,
+                        speed = ability.speed,
+                        range = ability.range,
+                        angle = ability.angle,
+                        collision = {
+                            ["Wall"] = true,
+                            ["Hero"] = false,
+                            ["Minion"] = true
+                        },
+                    }
+                end
 
-        local colPred = _G.DreamPred.GetPrediction(target, cTable, myHero)
-        if not colPred then
-            return nil
-        end
+                local colPred = _G.DreamPred.GetPrediction(target, cTable, myHero)
+                if not colPred then
+                    return nil
+                end
 
-        if colPred.hitChance < 0.35 then
-            return nil
+                if colPred.hitChance < 0.35 then
+                    return nil
+                end
+            end
         end
 
         local cCheck = _G.Prediction:get_prediction(ability, target) 
@@ -684,11 +689,11 @@ end
 
 --------------------------------------------------------------------------------------------------------------------------------
 
-local menu_version = 0.26
+local menu_version = 0.27
 if not _G.ShaunPredictionInitialized then
     do
         local function Update()
-            local version = 0.26
+            local version = 0.27
             local file_name = "ShaunPrediction.lua"
             local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/ShaunPrediction.lua"
             
