@@ -1,7 +1,7 @@
 local UpdateDraw = false
 do
   	local function AutoUpdate()
-		local Version = 3.2
+		local Version = 3.3
 		local file_name = "Shaunyboi-RandomUtilities.lua"
 		local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-RandomUtilities.lua"
 		
@@ -757,14 +757,19 @@ local function SemiManualExhaust()
 end
 
 local function on_gap_close(obj, data)
+    if not myHero.is_alive then return end
+
     if menu:get_value(ex_gapclose) == 1 and obj.is_enemy and obj.is_hero and myHero:distance_to(data.end_pos) <= myHero.attack_range then
 
-        if ex_slotd and ml.Ready(SLOT_D) then
-            spellbook:cast_spell_targetted(SLOT_D, obj, 0.25)
-            game:print_chat("Gap Close Exhaust On: " .. tostring(obj.champ_name))
-        elseif ex_slotf and ml.Ready(SLOT_F) then
-            spellbook:cast_spell_targetted(SLOT_F, obj, 0.25)
-            game:print_chat("Gap Close Exhaust On: " .. tostring(obj.champ_name))
+        if menu:get_value_string("Use [Exhaust] On: "..tostring(obj.champ_name)) == 1 then
+
+            if ex_slotd and ml.Ready(SLOT_D) then
+                spellbook:cast_spell_targetted(SLOT_D, obj, 0.25)
+                game:print_chat("Gap Close Exhaust On: " .. tostring(obj.champ_name))
+            elseif ex_slotf and ml.Ready(SLOT_F) then
+                spellbook:cast_spell_targetted(SLOT_F, obj, 0.25)
+                game:print_chat("Gap Close Exhaust On: " .. tostring(obj.champ_name))
+            end
         end
     end
 end
