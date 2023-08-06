@@ -1,7 +1,7 @@
 local UpdateDraw = false
 do
   	local function AutoUpdate()
-		local Version = 3.1
+		local Version = 3.2
 		local file_name = "Shaunyboi-RandomUtilities.lua"
 		local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-RandomUtilities.lua"
 		
@@ -290,9 +290,9 @@ random_enabled = menu:add_checkbox("Enabled", random_category, 1)
 menu:add_label("Shauny's Random Utilities", random_category)
 menu:add_label("#Loveyou", random_category)
 
-ex_menu = menu:add_subcategory("[Semi Manual Exhaust]", random_category)
-menu:add_label("Selects Closest Enemy To you", ex_menu)
-ex_enabled = menu:add_checkbox("Use Manual [Exhaust]", ex_menu, 1)
+ex_menu = menu:add_subcategory("[Exhaust Features]", random_category)
+ex_gapclose = menu:add_checkbox("[Exhaust] On Enemy Gap Close Inside Your [AA] Range", ex_menu, 1)
+ex_enabled = menu:add_checkbox("Use Semi Manual [Exhaust]", ex_menu, 1)
 ex_key = menu:add_keybinder("Semi Manual [Exhaust] Key", ex_menu, string.byte('A'))
 ex_whitelist = menu:add_subcategory("[Exhaust] Whitelist", ex_menu)
 for _, ex in pairs(game.players) do
@@ -725,8 +725,8 @@ local function ThreshWarding()
 end
 
 -----------------------------------------------------------------------------------
-ex_slotd = false
-ex_slotf = false
+local ex_slotd = false
+local ex_slotf = false
 local function CheckForExhaust()
 	local slot_d = spellbook:get_spell_slot(SLOT_D).spell_data.spell_name
 	local slot_f = spellbook:get_spell_slot(SLOT_F).spell_data.spell_name
@@ -744,6 +744,7 @@ local function SemiManualExhaust()
 	if menu:get_value(ex_enabled) == 1 and CheckForExhaust() then
 		local target = selector:find_target(650, mode_distance)
 		if game:is_key_down(menu:get_value(ex_key)) and ml.IsValid(target) then
+            
 			if menu:get_value_string("Use [Exhaust] On: "..tostring(target.champ_name)) == 1 then
 				if ex_slotd and ml.Ready(SLOT_D) then
 					spellbook:cast_spell_targetted(SLOT_D, target, 0.25)
@@ -755,7 +756,18 @@ local function SemiManualExhaust()
   	end
 end
 
+local function on_gap_close(obj, data)
+    if menu:get_value(ex_gapclose) == 1 and obj.is_enemy and obj.is_hero and myHero:distance_to(data.end_pos) <= myHero.attack_range then
 
+        if ex_slotd and ml.Ready(SLOT_D) then
+            spellbook:cast_spell_targetted(SLOT_D, obj, 0.25)
+            game:print_chat("Gap Close Exhaust On: " .. tostring(obj.champ_name))
+        elseif ex_slotf and ml.Ready(SLOT_F) then
+            spellbook:cast_spell_targetted(SLOT_F, obj, 0.25)
+            game:print_chat("Gap Close Exhaust On: " .. tostring(obj.champ_name))
+        end
+    end
+end
 
 -----------------------------------------------------------------------------------
 
@@ -970,3 +982,4 @@ client:set_event_callback("on_draw", on_draw)
 client:set_event_callback("on_lose_vision", on_lose_vision)
 client:set_event_callback("on_object_created", on_object_created)
 client:set_event_callback("on_teleport", on_teleport)
+client:set_event_callback("on_gap_close", on_gap_close)
