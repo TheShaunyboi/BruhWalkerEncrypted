@@ -1,7 +1,7 @@
 local UpdateDraw = false
 do
   	local function AutoUpdate()
-		local Version = 3.3
+		local Version = 3.4
 		local file_name = "Shaunyboi-RandomUtilities.lua"
 		local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-RandomUtilities.lua"
 		
@@ -289,6 +289,14 @@ end
 random_enabled = menu:add_checkbox("Enabled", random_category, 1)
 menu:add_label("Shauny's Random Utilities", random_category)
 menu:add_label("#Loveyou", random_category)
+
+disable_spell_evade = menu:add_subcategory("[Disable Evade On Spell's & Shields]", random_category)
+morg_e = menu:add_checkbox("Morgana [E] Shield", disable_spell_evade, 1)
+sivir_e = menu:add_checkbox("Sivir [E] Shield", disable_spell_evade, 1)
+olaf_r = menu:add_checkbox("Olaf [R]", disable_spell_evade, 1)
+dusk_blade = menu:add_checkbox("Duskblade Item Passive", disable_spell_evade, 1)
+edge_night = menu:add_checkbox("Edge Of Night Item Shield", disable_spell_evade, 1)
+bansheesveil_item = menu:add_checkbox("Banshees Veil Item Shield", disable_spell_evade, 1)
 
 ex_menu = menu:add_subcategory("[Exhaust Features]", random_category)
 ex_gapclose = menu:add_checkbox("[Exhaust] On Enemy Gap Close Inside Your [AA] Range", ex_menu, 1)
@@ -793,10 +801,69 @@ local function Arc(p1, p2, phi, step)
 	return result
 end
 
+local function disableEvade()
+    client:set_dependency_ready_callback("ArkEvade", function()
+        if myHero.champ_name == "Morgana" then
+            if menu:get_value(morg_e) == 1 and myHero:has_buff("MorganaE") then
+                evade:disable_evade()
+                renderer:add_indicator("Shaunyboi: Evade Disabled!", 255, 255, 255)
+            else
+                evade:enable_evade()
+            end
+        end
+    
+        if myHero.champ_name == "Sivir" then
+            if menu:get_value(sivir_e) == 1 and myHero:has_buff("SivirE") then
+                evade:disable_evade()
+                renderer:add_indicator("Shaunyboi: Evade Disabled!", 255, 255, 255)
+            else
+                evade:enable_evade()
+            end
+        end
+
+        if myHero.champ_name == "Olaf" then
+            if menu:get_value(olaf_r) == 1 and myHero:has_buff("OlafRagnarok") then
+                evade:disable_evade()
+                renderer:add_indicator("Shaunyboi: Evade Disabled!", 255, 255, 255)
+            else
+                evade:enable_evade()
+            end
+        end
+    
+        if myHero:has_item("6691") then
+            if menu:get_value(dusk_blade) == 1 and myHero:has_buff("6691intangible") then
+                evade:disable_evade()
+                renderer:add_indicator("Shaunyboi: Evade Disabled!", 255, 255, 255)
+            else
+                evade:enable_evade()
+            end
+        end
+
+        if myHero:has_item("3814") then
+            if menu:get_value(edge_night) == 1 and myHero:has_buff("itemmagekillerveil") then
+                evade:disable_evade()
+                renderer:add_indicator("Shaunyboi: Evade Disabled!", 255, 255, 255)
+            else
+                evade:enable_evade()
+            end
+        end
+
+        if myHero:has_item("3102") then
+            if menu:get_value(bansheesveil_item) == 1 and myHero:has_buff("bansheesveil") then
+                evade:disable_evade()
+                renderer:add_indicator("Shaunyboi: Evade Disabled!", 255, 255, 255)
+            else
+                evade:enable_evade()
+            end
+        end
+    end)
+end
+
 local function on_draw()
 
 	local screen_size = game.screen_size
 	local myherodraw = game:world_to_screen(myHero.origin.x, myHero.origin.y, myHero.origin.z)
+    disableEvade()
 
   	if menu:get_value(random_enabled) == 1 and menu:get_value(sounds_selector_use) == 1 and myHero.is_alive then
 
