@@ -1,7 +1,7 @@
 local UpdateDraw = false
 do
   	local function AutoUpdate()
-		local Version = 3.4
+		local Version = 3.5
 		local file_name = "Shaunyboi-RandomUtilities.lua"
 		local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-RandomUtilities.lua"
 		
@@ -149,6 +149,16 @@ local function GetEnemyHeroes()
 	return _EnemyHeroes
 end	
 
+local function GetAllyHeroes()
+	local _AllyHeroes = {}
+	for _, unit in ipairs(game.players) do
+		if unit and not unit.is_enemy and unit ~= myHero then
+			table.insert(_AllyHeroes, unit)
+		end
+	end	
+	return _AllyHeroes
+end	
+
 local function GetEnemyCount(range, unit)
 	count = 0
 	for i, hero in ipairs(GetEnemyHeroes()) do
@@ -294,6 +304,7 @@ disable_spell_evade = menu:add_subcategory("[Disable Evade On Spell's & Shields]
 morg_e = menu:add_checkbox("Morgana [E] Shield", disable_spell_evade, 1)
 sivir_e = menu:add_checkbox("Sivir [E] Shield", disable_spell_evade, 1)
 olaf_r = menu:add_checkbox("Olaf [R]", disable_spell_evade, 1)
+noc_w = menu:add_checkbox("Nocturne [W]", disable_spell_evade, 1)
 dusk_blade = menu:add_checkbox("Duskblade Item Passive", disable_spell_evade, 1)
 edge_night = menu:add_checkbox("Edge Of Night Item Shield", disable_spell_evade, 1)
 bansheesveil_item = menu:add_checkbox("Banshees Veil Item Shield", disable_spell_evade, 1)
@@ -803,12 +814,18 @@ end
 
 local function disableEvade()
     client:set_dependency_ready_callback("ArkEvade", function()
-        if myHero.champ_name == "Morgana" then
-            if menu:get_value(morg_e) == 1 and myHero:has_buff("MorganaE") then
-                evade:disable_evade()
-                renderer:add_indicator("Shaunyboi: Evade Disabled!", 255, 255, 255)
-            else
-                evade:enable_evade()
+        if menu:get_value(morg_e) == 1 then
+            for _, ally in ipairs(game.players) do
+                if ally and not ally.is_enemy and ally.is_alive then
+                    if (ally.champ_name == "Morgana" or myHero.champ_name == "Morgana") then
+                        if myHero:has_buff("MorganaE") then
+                            evade:disable_evade()
+                            renderer:add_indicator("Shaunyboi: Evade Disabled!", 255, 255, 255)
+                        else
+                            evade:enable_evade()
+                        end
+                    end
+                end
             end
         end
     
@@ -823,6 +840,15 @@ local function disableEvade()
 
         if myHero.champ_name == "Olaf" then
             if menu:get_value(olaf_r) == 1 and myHero:has_buff("OlafRagnarok") then
+                evade:disable_evade()
+                renderer:add_indicator("Shaunyboi: Evade Disabled!", 255, 255, 255)
+            else
+                evade:enable_evade()
+            end
+        end
+
+        if myHero.champ_name == "Nocturne" then
+            if menu:get_value(noc_w) == 1 and myHero:has_buff("NocturneShroudofDarkness") then
                 evade:disable_evade()
                 renderer:add_indicator("Shaunyboi: Evade Disabled!", 255, 255, 255)
             else
