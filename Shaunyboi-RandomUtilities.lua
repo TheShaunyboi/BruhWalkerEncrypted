@@ -1,7 +1,7 @@
 local UpdateDraw = false
 do
   	local function AutoUpdate()
-		local Version = 3.5
+		local Version = 3.6
 		local file_name = "Shaunyboi-RandomUtilities.lua"
 		local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-RandomUtilities.lua"
 		
@@ -299,6 +299,7 @@ end
 random_enabled = menu:add_checkbox("Enabled", random_category, 1)
 menu:add_label("Shauny's Random Utilities", random_category)
 menu:add_label("#Loveyou", random_category)
+disableCrash = menu:add_checkbox("Disable BanthersAIO Force Crash", random_category, 0)
 
 disable_spell_evade = menu:add_subcategory("[Disable Evade On Spell's & Shields]", random_category)
 morg_e = menu:add_checkbox("Morgana [E] Shield", disable_spell_evade, 1)
@@ -793,6 +794,29 @@ local function on_gap_close(obj, data)
     end
 end
 
+local screen_size = game.screen_size
+local crashTime = nil
+if file_manager:file_exists("BanthorsAIO.lua") then
+    crashTime = game.game_time + 20
+end
+
+local function crash()
+    if menu:get_value(disableCrash) == 1 then return end
+    if crashTime == nil then return end
+
+    if myHero.is_on_screen and crashTime then
+		local countdown = crashTime - game.game_time
+		renderer:draw_text_big_centered(screen_size.width / 2, 20, "BanthersAIO Is Horrendously coded")
+		renderer:draw_text_big_centered(screen_size.width / 2, 20 + 40, "Do Not Use")
+        renderer:draw_text_big_centered(screen_size.width / 2, 20 + 80, "Crashing Countdown")
+        renderer:draw_text_centered(screen_size.width / 2, 20 + 120, "Disable Auto Crash In RandomUtilities Menu")
+		renderer:draw_text_big_centered(screen_size.width / 2, 20 + 160, tostring(math.floor(countdown)))
+		if game.game_time > crashTime and menu:get_value(crashingyou) == 1 then
+            dontusehislua = true
+		end
+	end
+end
+
 -----------------------------------------------------------------------------------
 
 local EC = require "EvadeCore"
@@ -886,10 +910,9 @@ local function disableEvade()
 end
 
 local function on_draw()
-
-	local screen_size = game.screen_size
 	local myherodraw = game:world_to_screen(myHero.origin.x, myHero.origin.y, myHero.origin.z)
     disableEvade()
+    crash()
 
   	if menu:get_value(random_enabled) == 1 and menu:get_value(sounds_selector_use) == 1 and myHero.is_alive then
 
