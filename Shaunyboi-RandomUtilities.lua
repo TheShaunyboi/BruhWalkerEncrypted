@@ -1,7 +1,7 @@
 local UpdateDraw = false
 do
   	local function AutoUpdate()
-		local Version = 3.6
+		local Version = 3.7
 		local file_name = "Shaunyboi-RandomUtilities.lua"
 		local url = "https://raw.githubusercontent.com/TheShaunyboi/BruhWalkerEncrypted/main/Shaunyboi-RandomUtilities.lua"
 		
@@ -299,7 +299,7 @@ end
 random_enabled = menu:add_checkbox("Enabled", random_category, 1)
 menu:add_label("Shauny's Random Utilities", random_category)
 menu:add_label("#Loveyou", random_category)
-disableCrash = menu:add_checkbox("Disable BanthersAIO Force Crash", random_category, 0)
+--disableCrash = menu:add_checkbox("BanthersAIO is horrendous #facts", random_category, 0)
 
 disable_spell_evade = menu:add_subcategory("[Disable Evade On Spell's & Shields]", random_category)
 morg_e = menu:add_checkbox("Morgana [E] Shield", disable_spell_evade, 1)
@@ -912,7 +912,7 @@ end
 local function on_draw()
 	local myherodraw = game:world_to_screen(myHero.origin.x, myHero.origin.y, myHero.origin.z)
     disableEvade()
-    crash()
+    --crash()
 
   	if menu:get_value(random_enabled) == 1 and menu:get_value(sounds_selector_use) == 1 and myHero.is_alive then
 
